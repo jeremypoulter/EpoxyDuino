@@ -247,8 +247,18 @@ void digitalReadValue(uint8_t pin, uint8_t val);
  */
 uint8_t digitalWriteValue(uint8_t pin);
 
+// Simulated time
+void set_millis(unsigned long);
+void add_millis(unsigned long);
+void set_micros(unsigned long);
+void add_micros(unsigned long);
+void add_seconds(unsigned long);
+void set_seconds(unsigned long);
+void set_real_time();
+
 unsigned long millis();
 unsigned long micros();
+
 void delay(unsigned long ms);
 void delayMicroseconds(unsigned int us);
 

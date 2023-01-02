@@ -17,6 +17,9 @@
 #include <time.h> // clock_gettime()
 #include "Arduino.h"
 
+unsigned long epoxy_micros;
+bool epoxy_real_time = true;
+
 // -----------------------------------------------------------------------
 // Arduino methods emulated in Unix
 // -----------------------------------------------------------------------
@@ -67,17 +70,72 @@ int analogRead(uint8_t /*pin*/) { return 0; }
 void analogWrite(uint8_t /*pin*/, int /*val*/) {}
 
 unsigned long millis() {
+  if (epoxy_real_time)
+  {
   struct timespec spec;
   clock_gettime(CLOCK_MONOTONIC, &spec);
   unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
   return ms;
 }
+  else
+  {
+    return epoxy_micros / 1000;
+  }
+}
+
+void set_real_time()
+{
+  epoxy_real_time = true;
+}
+
+void set_seconds(unsigned long s)
+{
+  epoxy_micros = s * 1000 * 1000;
+  epoxy_real_time = false;
+}
+
+void add_seconds(unsigned long s)
+{
+  epoxy_micros += s * 1000 * 1000;
+  epoxy_real_time = false;
+}
+
+void set_millis(unsigned long ms)
+{
+  epoxy_micros = 1000 * ms;
+  epoxy_real_time = false;
+}
+
+void add_millis(unsigned long delta_ms)
+{
+  epoxy_micros += 1000 * delta_ms;
+  epoxy_real_time = false;
+}
+
+void set_micros(unsigned long us)
+{
+  epoxy_micros = us;
+  epoxy_real_time = false;
+}
+
+void add_micros(unsigned long delta_us)
+{
+  epoxy_micros += delta_us;
+  epoxy_real_time = false;
+}
 
 unsigned long micros() {
+  if (epoxy_real_time)
+  {
   struct timespec spec;
   clock_gettime(CLOCK_MONOTONIC, &spec);
   unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
   return us;
+}
+  else
+  {
+    return 1000*epoxy_micros;
+  }
 }
 
 void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration*/) {}
@@ -85,11 +143,25 @@ void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration
 void noTone(uint8_t /*_pin*/) {}
 
 void delay(unsigned long ms) {
+  if (epoxy_real_time)
+  {
   usleep(ms * 1000);
+}
+  else
+  {
+    epoxy_micros += 1000 * ms;
+  }
 }
 
 void delayMicroseconds(unsigned int us) {
+  if (epoxy_real_time)
+  {
   usleep(us);
+  }
+  else
+  {
+    delay(1000*us);
+  }
 }
 
 unsigned long pulseIn(
