@@ -1,0 +1,8 @@
+# git remote -v
+# git remote add upstream git@github.com:bxparks/EpoxyDuino.git
+# git remote -v
+git fetch upstream
+git checkout master
+git status
+git merge upstream/master
+git push origin master
