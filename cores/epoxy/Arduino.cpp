@@ -12,6 +12,10 @@
  *
  */
 
+#ifdef EPOXY_TEST
+#include "epoxy_test/Arduino.inc"
+#endif
+
 #include <inttypes.h>
 #include <unistd.h> // usleep()
 #include <time.h> // clock_gettime()
@@ -81,47 +85,6 @@ unsigned long millis() {
   {
     return epoxy_micros / 1000;
   }
-}
-
-void set_real_time()
-{
-  epoxy_real_time = true;
-}
-
-void set_seconds(unsigned long s)
-{
-  epoxy_micros = s * 1000 * 1000;
-  epoxy_real_time = false;
-}
-
-void add_seconds(unsigned long s)
-{
-  epoxy_micros += s * 1000 * 1000;
-  epoxy_real_time = false;
-}
-
-void set_millis(unsigned long ms)
-{
-  epoxy_micros = 1000 * ms;
-  epoxy_real_time = false;
-}
-
-void add_millis(unsigned long delta_ms)
-{
-  epoxy_micros += 1000 * delta_ms;
-  epoxy_real_time = false;
-}
-
-void set_micros(unsigned long us)
-{
-  epoxy_micros = us;
-  epoxy_real_time = false;
-}
-
-void add_micros(unsigned long delta_us)
-{
-  epoxy_micros += delta_us;
-  epoxy_real_time = false;
 }
 
 unsigned long micros() {

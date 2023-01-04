@@ -1,4 +1,5 @@
 # Include this Makefile to compile an Arduino *.ino file on Linux or MacOS.
+# vim: ts=4:noexpandtab
 #
 # Create a 'Makefile' in the sketch folder. For example, for the
 # Blink/Blink.ino program, the makefile will be 'Blink/Makefile'.
@@ -207,17 +208,20 @@ OBJS +=$(APP_NAME).o
 
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Linking $<"
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
+	@echo "Compiling $<"
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
 
 # We don't need this rule because the implicit GNU Make rules for converting
 # *.c and *.cpp into *.o files are sufficient.
 #
-# %.o: %.cpp
-#	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+%.o: %.cpp
+	@echo "Compiling $<"
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # The following simple rules do not capture all header dependencies of a given
 # *.cpp or *.c file. It's probably better to make each *.cpp and *.c to depend
@@ -245,4 +249,5 @@ run:
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).
 clean: $(MORE_CLEAN)
-	rm -f $(OBJS) $(APP_NAME).out $(GENERATED)
+	@echo "Cleaning..."
+	@rm -f $(OBJS) $(APP_NAME).out $(GENERATED)

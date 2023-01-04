@@ -13,6 +13,10 @@
 #ifndef EPOXY_DUINO_EPOXY_ARDUINO_H
 #define EPOXY_DUINO_EPOXY_ARDUINO_H
 
+#ifdef EPOXY_TEST
+#include "epoxy_test/Arduino.h"
+#endif
+
 // xx.yy.zz => xxyyzz (without leading 0)
 #define EPOXY_DUINO_VERSION 10500
 #define EPOXY_DUINO_VERSION_STRING "1.5.0"
@@ -246,15 +250,6 @@ void digitalReadValue(uint8_t pin, uint8_t val);
  * function, so it is not available when compiling on actual hardware.
  */
 uint8_t digitalWriteValue(uint8_t pin);
-
-// Simulated time
-void set_millis(unsigned long);
-void add_millis(unsigned long);
-void set_micros(unsigned long);
-void add_micros(unsigned long);
-void add_seconds(unsigned long);
-void set_seconds(unsigned long);
-void set_real_time();
 
 unsigned long millis();
 unsigned long micros();
