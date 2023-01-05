@@ -23,7 +23,7 @@ std::atomic<bool> Injector::do_reset{false};
 
 Event::Event(unsigned long time_us)
 {
-  us_ = micros()+time_us;
+  us_ = time_us;
 }
 
 Injector::Injector()
@@ -46,7 +46,7 @@ void Injector::reset()
 
 void Injector::addEvent(std::unique_ptr<Event> event)
 {
-  std::lock_guard<std::mutex> lock(mutex);
+  std::lock_guard<std::mutex> lock(events_mutex);
   events.insert(std::make_pair(event->us(), std::move(event)));
 }
 
@@ -58,11 +58,10 @@ size_t Injector::eventsSize()
 
 void Injector::operator()()
 {
-  int thread=0;
   run = true;
   while(run)
   {
-    unsigned long sleep_us=100;
+    long sleep_us=100;
     {
       std::lock_guard<std::mutex> lock(events_mutex);
       auto us = micros();
@@ -70,14 +69,33 @@ void Injector::operator()()
       {
         auto it = events.begin();
         unsigned long next = it->first;
-        // std::cout << "microseconds: " << us << ", next: " << next << std::endl;
         if (us >= next)
         {
-          it->second->raise();
+          unsigned long sched = it->second->raise();
+          us = micros();
+          if (it->second->chain)
+          {
+            sleep_us = std::min(sleep_us, (long)(it->second->chain->us())-(long)us);
+            auto evt = std::move(it->second->chain);
+            events.erase(it);
+            events.insert(std::make_pair( evt->us(), std::move(evt)));
+            break;
+          }
+          if (sched)
+          {
+            auto evt = std::move(it->second);
+            sleep_us = std::min(sleep_us, (long)sched);
+            events.erase(it);
+            events.insert(std::make_pair( sched, std::move(evt)));
+            break;
+          }
           events.erase(it);
         }
         else
+        {
+          sleep_us = std::min(sleep_us, (long)next -  (long)us);
           break;
+        }
       }
       if (do_reset)
       {
@@ -85,7 +103,7 @@ void Injector::operator()()
         do_reset = false;
       }
     }
-    usleep(sleep_us);
+    if (sleep_us > 0) usleep(sleep_us);
   }
 }
 

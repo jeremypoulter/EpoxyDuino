@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <iostream>
 
 namespace EpoxyInjection
 {
@@ -14,10 +15,15 @@ class Event
 
     // return value 0 if this is the last event
     virtual unsigned long raise() = 0;
+    virtual const char* name() const { return ""; }
+
+    // return value : time to reschedule this
+    // or 0 : delete the event
     unsigned long us() { return us_; }
 
+    std::unique_ptr<Event> chain = nullptr;
   private:
-    unsigned long us_;
+    unsigned long us_;  // micros() at which wake up
 };
 
 class Injector

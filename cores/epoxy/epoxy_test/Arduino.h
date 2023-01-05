@@ -2,6 +2,7 @@
 
 namespace EpoxyTest
 {
+  // TODO call reset between each unit test from AUnit if possible
   using Reset = void(*)();
   void registerReset(Reset);
   // Attempt to reset closest to a cold reset as possible
