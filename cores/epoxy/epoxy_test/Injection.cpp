@@ -1,3 +1,5 @@
+#ifdef EPOXY_TEST
+
 #include "Injection.h"
 #include "../Arduino.h"
 
@@ -88,3 +90,5 @@ void Injector::operator()()
 }
 
 }
+
+#endif

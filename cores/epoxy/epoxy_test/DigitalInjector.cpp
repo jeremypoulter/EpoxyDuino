@@ -1,3 +1,5 @@
+#ifdef EPOXY_TEST
+
 #include "DigitalInjector.h"
 #include <Arduino.h>
 #include <iostream>
@@ -14,3 +16,5 @@ namespace EpoxyInjection
     });
   };
 }
+
+#endif
