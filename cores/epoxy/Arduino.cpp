@@ -12,16 +12,17 @@
  *
  */
 
+#include <inttypes.h>
+#include <unistd.h> // usleep()
+#include <time.h> // clock_gettime()
+#include <atomic>
+#include "Arduino.h"
+
 #ifdef EPOXY_TEST
 #include "epoxy_test/Arduino.inc"
 #endif
 
-#include <inttypes.h>
-#include <unistd.h> // usleep()
-#include <time.h> // clock_gettime()
-#include "Arduino.h"
-
-unsigned long epoxy_micros;
+std::atomic<unsigned long> epoxy_micros;
 bool epoxy_real_time = true;
 
 // -----------------------------------------------------------------------

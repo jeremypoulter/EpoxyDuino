@@ -1,5 +1,12 @@
+#include "Injection.h"
+
 namespace EpoxyTest
 {
+  using Reset = void(*)();
+  void registerReset(Reset);
+  // Attempt to reset closest to a cold reset as possible
+  void reset();
+
   // Simulated time
   void set_millis(unsigned long);
   void add_millis(unsigned long);

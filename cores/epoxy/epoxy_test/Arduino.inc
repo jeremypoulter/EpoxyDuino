@@ -1,9 +1,38 @@
 // vim:syntax=cpp
-extern unsigned long epoxy_micros;
+#include <atomic>
+#include <set>
+#include <iostream>
+
+extern std::atomic<unsigned long> epoxy_micros;
 extern bool epoxy_real_time;
 
 namespace EpoxyTest
 {
+std::set<Reset>* resets = nullptr;
+
+void initTime()
+{
+  std::cout << "Not yet implemented : init time" << std::endl;
+}
+
+__attribute__((constructor))
+void arduinoReset()
+{
+  registerReset(initTime);
+}
+
+void registerReset(Reset rst)
+{
+  if (resets == nullptr) resets = new std::set<Reset>;
+  resets->insert(rst);
+}
+
+void reset()
+{
+  if (resets)
+    for(auto rst: *resets)
+      rst();
+}
 
 void set_real_time()
 {
