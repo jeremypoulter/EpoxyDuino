@@ -77,11 +77,11 @@ void analogWrite(uint8_t /*pin*/, int /*val*/) {}
 unsigned long millis() {
   if (epoxy_real_time)
   {
-  struct timespec spec;
-  clock_gettime(CLOCK_MONOTONIC, &spec);
-  unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
-  return ms;
-}
+    struct timespec spec;
+    clock_gettime(CLOCK_MONOTONIC, &spec);
+    unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
+    return ms;
+  }
   else
   {
     return epoxy_micros / 1000;
@@ -91,11 +91,11 @@ unsigned long millis() {
 unsigned long micros() {
   if (epoxy_real_time)
   {
-  struct timespec spec;
-  clock_gettime(CLOCK_MONOTONIC, &spec);
-  unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
-  return us;
-}
+    struct timespec spec;
+    clock_gettime(CLOCK_MONOTONIC, &spec);
+    unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
+    return us;
+  }
   else
   {
     return 1000*epoxy_micros;
@@ -109,8 +109,8 @@ void noTone(uint8_t /*_pin*/) {}
 void delay(unsigned long ms) {
   if (epoxy_real_time)
   {
-  usleep(ms * 1000);
-}
+    usleep(ms * 1000);
+  }
   else
   {
     epoxy_micros += 1000 * ms;
@@ -120,7 +120,7 @@ void delay(unsigned long ms) {
 void delayMicroseconds(unsigned int us) {
   if (epoxy_real_time)
   {
-  usleep(us);
+    usleep(us);
   }
   else
   {
