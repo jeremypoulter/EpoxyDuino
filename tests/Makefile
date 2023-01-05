@@ -11,7 +11,7 @@ SUB=
 tests:
 	@set -e; \
 	for i in $(SUB)*Test/Makefile; do \
-		echo '==== Making:' $$(dirname $$i); \
+		echo "==== Making:' $$(dirname $$ia"); \
 		echo "==== Cleaning $$(dirname $$i)"; \
 		$(MAKE) -C $$(dirname $$i) clean; \
 		echo "==== Buidling $$(dirname $$i)"; \
@@ -32,6 +32,6 @@ runtests:
 clean:
 	@set -e; \
 	for i in $(SUB)*Test/Makefile; do \
-		echo '==== Cleaning:' $$(dirname $$i)"; \
+		echo "==== Cleaning:' $$(dirname $$i)"; \
 		$(MAKE) -C $$(dirname $$i) clean; \
 	done
