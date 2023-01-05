@@ -23,6 +23,7 @@
 #endif
 
 std::atomic<unsigned long> epoxy_micros;
+unsigned long epoxy_start_time = 0;
 bool epoxy_real_time = true;
 
 // -----------------------------------------------------------------------
@@ -80,7 +81,7 @@ unsigned long millis() {
     struct timespec spec;
     clock_gettime(CLOCK_MONOTONIC, &spec);
     unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
-    return ms;
+    return ms - epoxy_start_time / 1000;
   }
   else
   {
@@ -94,7 +95,7 @@ unsigned long micros() {
     struct timespec spec;
     clock_gettime(CLOCK_MONOTONIC, &spec);
     unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
-    return us;
+    return us - epoxy_start_time;
   }
   else
   {
