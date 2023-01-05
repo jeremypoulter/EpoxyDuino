@@ -11,7 +11,7 @@ SUB=
 tests:
 	@set -e; \
 	for i in $(SUB)*Test/Makefile; do \
-		echo "==== Making:' $$(dirname $$ia"); \
+		echo "==== Making:' $$(dirname $$ia)"; \
 		echo "==== Cleaning $$(dirname $$i)"; \
 		$(MAKE) -C $$(dirname $$i) clean; \
 		echo "==== Buidling $$(dirname $$i)"; \
