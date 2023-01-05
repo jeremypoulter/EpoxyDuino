@@ -1,3 +1,5 @@
+#ifdef EPOXY_TEST
+
 #include "Script.h"
 #include <Arduino.h>
 #include <fstream>
@@ -158,3 +160,5 @@ unsigned long ScriptEvent::raise()
 }
 
 }
+
+#endif
