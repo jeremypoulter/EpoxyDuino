@@ -1,11 +1,12 @@
 #ifdef EPOXY_TEST
 
-#include "Injection.h"
-#include <Arduino.h>
-
 #include <unistd.h>
 #include <iostream>
 #include <thread>
+
+#include <Arduino.h>
+#include "Injection.h"
+#include "Event.h"
 
 extern std::atomic<unsigned long> epoxy_micros;
 extern bool epoxy_real_time;

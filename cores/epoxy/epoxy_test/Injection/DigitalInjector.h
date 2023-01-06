@@ -1,6 +1,7 @@
 #pragma once
-#include "Injection.h"
 #include <Arduino.h>
+
+#include "Event.h"
 
 namespace EpoxyInjection
 {
