@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef EPOXY_TEST
-#error "You must use -DEPOXY_TEST to include this file"
+#error "You should use <epoxy_test/script> instead of including this file."
 #endif
 
 #include <epoxy_test/injection>

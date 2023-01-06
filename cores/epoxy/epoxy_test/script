@@ -1,1 +1,5 @@
+#ifndef EPOXY_TEST
+#error "You must use -DEPOXY_TEST to include this file"
+#endif
+
 #include "Script/Script.h"
