@@ -44,22 +44,22 @@ bool ScriptParser::eat(const std::string &start, bool optional)
 
 int ScriptParser::getPinNumber()
 {
-	if (isdigit(line[0]))
-	{
-		int pin;
-		if (getNumber(pin))
-			return pin;
-		else
-			return -1;
-	}
+  if (isdigit(line[0]))
+  {
+    int pin;
+    if (getNumber(pin))
+      return pin;
+    else
+      return -1;
+  }
 
-	std::string pin = getWord();
-	auto it = pins_arduino.find(pin);
-	if (it != pins_arduino.end())
-		return it->second;
-	
-	error(std::string("Not a valid pin name: '"+pin+'\''));
-	return -1;
+  std::string pin = getWord();
+  auto it = pins_arduino.find(pin);
+  if (it != pins_arduino.end())
+    return it->second;
+
+  error(std::string("Not a valid pin name: '"+pin+'\''));
+  return -1;
 }
 
 // Parse a line of script
@@ -81,7 +81,9 @@ bool ScriptParser::getDuration(unsigned long &t)
 
 void ScriptParser::error(const std::string& s)
 {
-  std::cout << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
+  std::cerr << "***" << std::endl;
+  std::cerr << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
+  std::cerr << "***" << std::endl;
 }
 
 }

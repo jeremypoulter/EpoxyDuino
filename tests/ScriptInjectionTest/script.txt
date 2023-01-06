@@ -1,3 +1,0 @@
-pin 1 0     // digitalWrite(1,0)
-sync 100ms  // Wait until millis() == 100
-pin 1 1     // digitalWrite(1,1)

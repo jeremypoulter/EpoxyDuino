@@ -10,13 +10,21 @@ using aunit::TestRunner;
 test(ScriptInjection, pin)
 {
   EpoxyTest::reset();
-  EpoxyTest::Script script("script.txt");
+  EpoxyTest::Script script("scripts/script.txt");
 
   assertEqual(digitalRead(1), 0);
   while(millis() <= 110) delay(10);
   assertEqual(digitalRead(1), 1);
+}
 
-  std::cout << "end of test" << std::endl << std::flush; 
+test(ScriptInjection, pin_mapping)
+{
+  EpoxyTest::reset();
+  EpoxyTest::Script script("scripts/mapping.txt");
+
+  assertEqual(digitalRead(1), 0);
+  while(millis() <= 110) delay(10);
+  assertEqual(digitalRead(1), 1);
 }
 
 //---------------------------------------------------------------------------

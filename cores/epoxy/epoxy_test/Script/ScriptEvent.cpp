@@ -15,14 +15,19 @@ ScriptEvent::ScriptEvent(unsigned long us, Script* script)
 
 unsigned long ScriptEvent::raise()
 {
-  std::cout << micros() << " raise " << line << std::endl << std::flush;
   unsigned long next = 0;
+  // std::cout << micros() << " raise " << line << std::endl << std::flush;
+  if (eat("//", true) or eat("#", true))
+  {
+    line.clear();
+    chain = parent->step(next);
+  }
   std::string action = getWord();
   if (action == "pin")
   {
-    uint8_t pin, val;
-    getNumber(pin);
-    getNumber(val);
+    int pin = getPinNumber();
+    int val = getPinNumber();
+    // std::cout << micros() << " Setting pin " << pin << " to " << val << std::endl;
     digitalReadValue(pin, val);
   }
   else if (action == "wait")

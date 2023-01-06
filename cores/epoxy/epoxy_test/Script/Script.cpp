@@ -17,7 +17,7 @@ Script::Script(const std::string filename)
   input = new std::ifstream(filename);
   if (not input->good())
   {
-    std::cerr << "EpoxyTest::Script unable to open file " << filename << std::endl;
+    error(std::string("EpoxyTest::Script unable to open file ") +filename);
   }
   auto evt = step(0);
   if (evt)

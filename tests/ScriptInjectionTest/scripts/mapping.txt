@@ -1,0 +1,5 @@
+// Check that SS is mapped to pin 1
+// This is ok for EPOXY_CORE_AVR
+pin SS 0      // digitalWrite(D1,0)
+sync 100ms   // Wait until millis() == 100
+pin SS 1      // digitlWrite(D1,1)
