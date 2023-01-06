@@ -249,5 +249,5 @@ run:
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).
 clean: $(MORE_CLEAN)
-	@echo "Cleaning..."
+	@echo "    Cleaning..."
 	@rm -f $(OBJS) $(APP_NAME).out $(GENERATED)
