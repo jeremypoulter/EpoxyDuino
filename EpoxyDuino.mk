@@ -209,7 +209,7 @@ OBJS +=$(APP_NAME).o
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
 	@echo "    Linking $<"
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
