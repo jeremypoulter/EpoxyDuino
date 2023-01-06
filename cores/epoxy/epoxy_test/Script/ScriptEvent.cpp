@@ -17,13 +17,12 @@ unsigned long ScriptEvent::raise()
 {
   unsigned long next = 0;
   // std::cout << micros() << " raise " << line << std::endl << std::flush;
-  if (eat("//", true) or eat("#", true))
+  std::string action = getWord();
+  if (action=="#" or action=="//")
   {
     line.clear();
-    chain = parent->step(next);
   }
-  std::string action = getWord();
-  if (action == "pin")
+  else if (action == "pin")
   {
     int pin = getPinNumber();
     int val = getPinNumber();
