@@ -1,6 +1,6 @@
 #line 2 "DigitalReadTest"
 
-#include <epoxy_test/Script.h>
+#include <epoxy_test/script>
 #include <Arduino.h>
 #include <AUnit.h>
 

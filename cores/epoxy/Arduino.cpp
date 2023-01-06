@@ -19,7 +19,7 @@
 #include "Arduino.h"
 
 #ifdef EPOXY_TEST
-#include "epoxy_test/Arduino.inc"
+#include "epoxy_test/ArduinoTest.inc"
 #endif
 
 std::atomic<unsigned long> epoxy_micros;

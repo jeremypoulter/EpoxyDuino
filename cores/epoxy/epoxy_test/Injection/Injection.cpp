@@ -1,7 +1,7 @@
 #ifdef EPOXY_TEST
 
 #include "Injection.h"
-#include "../Arduino.h"
+#include <Arduino.h>
 
 #include <unistd.h>
 #include <iostream>

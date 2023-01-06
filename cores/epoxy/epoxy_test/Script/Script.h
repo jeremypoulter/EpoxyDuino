@@ -1,6 +1,10 @@
 #pragma once
 
-#include "Injection.h"
+#ifndef EPOXY_TEST
+#error "You must use -DEPOXY_TEST to include this file"
+#endif
+
+#include <epoxy_test/injection>
 
 #include <string>
 #include <iostream>

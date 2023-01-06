@@ -1,4 +1,9 @@
-#include "Injection.h"
+#pragma once
+
+#ifndef EPOXY_TEST
+#error "You must use -DEPOXY_TEST to include this file"
+#endif
+
 
 namespace EpoxyTest
 {

@@ -14,7 +14,7 @@
 #define EPOXY_DUINO_EPOXY_ARDUINO_H
 
 #ifdef EPOXY_TEST
-#include "epoxy_test/Arduino.h"
+#include "epoxy_test/ArduinoTest.h"
 #endif
 
 // xx.yy.zz => xxyyzz (without leading 0)
