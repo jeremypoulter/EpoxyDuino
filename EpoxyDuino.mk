@@ -208,19 +208,19 @@ OBJS +=$(APP_NAME).o
 
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
-	@echo "Linking $<"
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "    Linking $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
-	@echo "Compiling $<"
+	@echo "    Compiling $<"
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
 
 # We don't need this rule because the implicit GNU Make rules for converting
 # *.c and *.cpp into *.o files are sufficient.
 #
 %.o: %.cpp
-	@echo "Compiling $<"
+	@echo "    Compiling $<"
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # The following simple rules do not capture all header dependencies of a given
