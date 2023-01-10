@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <thread>
+#include <vector>
 
 #include <Arduino.h>
 #include "Injection.h"
@@ -66,36 +67,46 @@ void Injector::operator()()
     {
       std::lock_guard<std::mutex> lock(events_mutex);
       auto us = micros();
-      while (events.size())
+      if  (events.size())
       {
+				std::vector<Injector::Events::iterator> to_delete;
         auto it = events.begin();
         unsigned long next = it->first;
         if (us >= next)
         {
-          unsigned long sched = it->second->raise();
-          us = micros();
-          if (it->second->chain)
+          while(it->first == next)
           {
-            sleep_us = std::min(sleep_us, (long)(it->second->chain->us())-(long)us);
-            auto evt = std::move(it->second->chain);
-            events.erase(it);
-            events.insert(std::make_pair( evt->us(), std::move(evt)));
-            break;
+            unsigned long sched = it->second->raise();
+            us = micros();
+            if (it->second->chain or sched)
+            {
+              if (it->second->chain)
+              {
+                sleep_us = std::min(sleep_us, (long)(it->second->chain->us())-(long)us);
+                auto evt = std::move(it->second->chain);
+                events.erase(it);
+                events.insert(std::make_pair( evt->us(), std::move(evt)));
+              }
+              if (sched)
+              {
+                auto evt = std::move(it->second);
+                sleep_us = std::min(sleep_us, (long)sched);
+                events.erase(it);
+                events.insert(std::make_pair( sched, std::move(evt)));
+              }
+            }
+            else
+              to_delete.push_back(it);
+            it++;
           }
-          if (sched)
+          if (to_delete.size())
           {
-            auto evt = std::move(it->second);
-            sleep_us = std::min(sleep_us, (long)sched);
-            events.erase(it);
-            events.insert(std::make_pair( sched, std::move(evt)));
-            break;
+            for(auto& it: to_delete) events.erase(it);
           }
-          events.erase(it);
         }
         else
         {
           sleep_us = std::min(sleep_us, (long)next -  (long)us);
-          break;
         }
       }
       if (do_reset)

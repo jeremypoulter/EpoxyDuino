@@ -24,6 +24,7 @@ test(ScriptInjection, pin_mapping)
 
   assertEqual(digitalRead(1), 0);
   while(millis() <= 110) delay(10);
+  assertEqual(digitalRead(SS), 1);
   assertEqual(digitalRead(1), 1);
 }
 
