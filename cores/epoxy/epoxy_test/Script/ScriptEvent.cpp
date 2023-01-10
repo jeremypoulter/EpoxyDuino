@@ -16,11 +16,16 @@ ScriptEvent::ScriptEvent(unsigned long us, Script* script)
 unsigned long ScriptEvent::raise()
 {
   unsigned long next = 0;
-  // std::cout << micros() << " raise " << line << std::endl << std::flush;
+  unsigned long resched = 0;
+  std::cout << micros() << " raise " << line << std::endl << std::flush;
   std::string action = getWord();
   if (action=="#" or action=="//")
   {
     line.clear();
+  }
+  else if (action == "at")
+  {
+    getDuration(resched);
   }
   else if (action == "pin")
   {
@@ -42,7 +47,7 @@ unsigned long ScriptEvent::raise()
     if (us < t)
     {
       line = org;
-      return (t);  // rechedule
+      return t; // rechedule
     }
   }
   else
@@ -52,10 +57,10 @@ unsigned long ScriptEvent::raise()
   trim();
   if (eat("//", true)) line.clear();
   if (eat("#", true)) line.clear();
-  if (line.length())
+  if (line.length() and resched == 0)
     error("Garbage");
   chain = parent->step(next);
-  return 0;
+  return resched;
 }
 
 } // ns

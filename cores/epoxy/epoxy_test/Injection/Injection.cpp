@@ -9,10 +9,16 @@
 #include "Injection.h"
 #include "Event.h"
 
-extern std::atomic<unsigned long> epoxy_micros;
-extern bool epoxy_real_time;
+#if 0
+#define debug(args) { std::cout  << micros() << ' ' << args << std::endl; }
+#else
+#define debug(args)
+#endif
 
 using namespace std;
+
+extern std::atomic<unsigned long> epoxy_micros;
+extern bool epoxy_real_time;
 
 namespace EpoxyInjection
 {
@@ -69,40 +75,43 @@ void Injector::operator()()
       auto us = micros();
       if  (events.size())
       {
-				std::vector<Injector::Events::iterator> to_delete;
+        std::vector<Injector::Events::iterator> to_delete;
+        std::vector<Injector::Events::value_type> to_insert;
         auto it = events.begin();
         unsigned long next = it->first;
         if (us >= next)
         {
           while(it->first == next)
           {
+            debug("injector raise " << next);
             unsigned long sched = it->second->raise();
             us = micros();
-            if (it->second->chain or sched)
+            auto& chain = it->second->chain;
+            if (chain or sched)
             {
-              if (it->second->chain)
+              if (chain)
               {
-                sleep_us = std::min(sleep_us, (long)(it->second->chain->us())-(long)us);
-                auto evt = std::move(it->second->chain);
-                events.erase(it);
-                events.insert(std::make_pair( evt->us(), std::move(evt)));
+                debug("injector chain " << chain->name());
+                sleep_us = std::min(sleep_us, (long)(chain->us())-(long)us);
+                auto evt = std::move(chain);
+                to_delete.push_back(it);
+                to_insert.push_back(std::make_pair( evt->us(), std::move(evt)));
               }
               if (sched)
               {
+                debug("injector sched " << sched);
                 auto evt = std::move(it->second);
                 sleep_us = std::min(sleep_us, (long)sched);
-                events.erase(it);
-                events.insert(std::make_pair( sched, std::move(evt)));
+                to_delete.push_back(it);
+                to_insert.push_back(std::make_pair( sched, std::move(evt)));
               }
             }
             else
               to_delete.push_back(it);
             it++;
           }
-          if (to_delete.size())
-          {
-            for(auto& it: to_delete) events.erase(it);
-          }
+          if (to_delete.size()) for(auto& it: to_delete) events.erase(it);
+          if (to_insert.size()) for(auto& pair: to_insert) events.insert(std::move(pair));
         }
         else
         {

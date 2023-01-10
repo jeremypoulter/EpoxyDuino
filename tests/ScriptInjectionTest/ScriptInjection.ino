@@ -28,6 +28,16 @@ test(ScriptInjection, pin_mapping)
   assertEqual(digitalRead(1), 1);
 }
 
+test(ScriptInjection, at)
+{
+  EpoxyTest::reset();
+  EpoxyTest::Script script("scripts/at.txt");
+
+  assertEqual(digitalRead(4), 0);
+  while(millis() <= 550) delay(10);
+  assertEqual(digitalRead(4), 1);
+}
+
 //---------------------------------------------------------------------------
 
 void setup() {
