@@ -67,6 +67,8 @@ test(WaitRaise, up)
 And in raise_pin_14.txt, we raise the pin after 2 seconds
 
 ```
+pin 14 0
+
 // raise pin 14 after 2 seconds
 at 2s pin 14 1
 ```
