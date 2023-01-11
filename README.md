@@ -12,6 +12,8 @@ These features are available with `-DEPOXY_TEST` flag set during compilation.
 
 # Simulated time
 
+Note: simulated time is not working yet when script injection is running.
+
 Time simulation allow to simulate time for millis() and micros().
 
 See https://github.com/hsaturn/EpoxyDuino/blob/develop/cores/epoxy/epoxy_test/ArduinoTest.h
