@@ -9,7 +9,7 @@ namespace EpoxyTest
 ScriptEvent::ScriptEvent(unsigned long us, Script* script)
     : Event(us)
     , ScriptParser(script->getLine(), script->getLineNr())
-    , parent(script)
+    , script(script)
 {
 }
 
@@ -63,7 +63,7 @@ unsigned long ScriptEvent::raise()
   if (eatWord("#", true)) line.clear();
   if (line.length() and resched == 0)
     error("Garbage");
-  chain = parent->step(next);
+  chain = script->step(next);
   return resched;
 }
 
