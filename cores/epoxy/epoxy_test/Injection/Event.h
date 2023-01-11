@@ -8,6 +8,15 @@
 #error "You must not include this header, use <epoxy_test/injection> instead."
 #endif
 
+#ifdef EPOXY_TEST_DEBUG
+#include <iostream>
+#define debug(args) { std::cout  << micros() << ' ' << args << std::endl; }
+#else
+#define debug(args)
+#endif
+
+
+
 namespace EpoxyInjection
 {
 

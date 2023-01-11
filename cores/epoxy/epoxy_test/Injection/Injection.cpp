@@ -10,12 +10,6 @@
 #include "Injection.h"
 #include "Event.h"
 
-#if 0
-#define debug(args) { std::cout  << micros() << ' ' << args << std::endl; }
-#else
-#define debug(args)
-#endif
-
 using namespace std;
 
 extern std::atomic<unsigned long> epoxy_micros;

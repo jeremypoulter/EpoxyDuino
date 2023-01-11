@@ -17,9 +17,12 @@ unsigned long ScriptEvent::raise()
 {
   unsigned long next = 0;
   unsigned long resched = 0;
-  std::cout << micros() << " raise " << line << std::endl << std::flush;
   std::string action = getWord();
-  if (action=="#" or action=="//")
+  debug (" raise action=" << action << ", line=" << line);
+  if (action=="")
+  {
+  }
+  else if (action=="#" or action=="//")
   {
     line.clear();
   }
@@ -52,7 +55,8 @@ unsigned long ScriptEvent::raise()
   }
   else
   {
-    error(std::string("Unknown script command: ")+line);
+    error(std::string("Unknown script command: ") + action);
+    line = "";
   }
   trim();
   if (eatWord("//", true)) line.clear();
