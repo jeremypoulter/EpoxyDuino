@@ -55,8 +55,8 @@ unsigned long ScriptEvent::raise()
     error(std::string("Unknown script command: ")+line);
   }
   trim();
-  if (eat("//", true)) line.clear();
-  if (eat("#", true)) line.clear();
+  if (eatWord("//", true)) line.clear();
+  if (eatWord("#", true)) line.clear();
   if (line.length() and resched == 0)
     error("Garbage");
   chain = parent->step(next);

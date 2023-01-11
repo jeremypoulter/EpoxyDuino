@@ -29,9 +29,14 @@ void ScriptParser::trim()
   while(line[0] == ' ') line.erase(0,1);
 }
 
-bool ScriptParser::eat(const std::string &start, bool optional)
+bool ScriptParser::eatWord(const std::string &start, bool optional)
 {
-  if (line.substr(0, start.length()) == start)
+  if (line == start)
+  {
+    line = "";
+    return true;
+  }
+  if (line.substr(0, start.length()+1) == start+' ')
   {
     line.erase(0, start.length());
     trim();
@@ -62,6 +67,46 @@ int ScriptParser::getPinNumber()
   return -1;
 }
 
+int ScriptParser::getPeriodUs()
+{
+  if (not isdigit(line[0]))
+  {
+    error("Expected number");
+    return 0;
+  }
+
+  int val;
+  getNumber(val);
+
+  int period = periodUs();
+  if (period == 0) period = ratioUs();
+
+  if (period == 0)
+  {
+    error("Expected delay or frequency");
+    return 0;
+  }
+
+  return val * period;
+}
+
+int ScriptParser::periodUs()
+{
+  if (eatWord("Mhz", true)) return 1;
+  else if (eatWord("kHz", true)) return 1000;
+  else if (eatWord("Hz", true)) return 1000000;
+  return 0;
+}
+
+int ScriptParser::ratioUs()
+{
+  if (eatWord("us", true)) return 1;
+  else if (eatWord("ms", true)) return 1000;
+  else if (eatWord("s", true)) return 1000000;
+  else if (eatWord("mn", true)) return 1000000 * 60;
+  return 0;
+}
+
 // Parse a line of script
 bool ScriptParser::getDuration(unsigned long &t)
 {
@@ -70,10 +115,12 @@ bool ScriptParser::getDuration(unsigned long &t)
   {
     if (not getNumber(t))
       return false;
-    if (eat("us", true)) { return true; }
-    else if (eat("ms", true)) { t *= 1000; return true; }
-    else if (eat("s", true)) { t *= 1000000; return true; }
-    else if (eat("mn", true)) { t *= 1000000 * 60; return true; }
+    int ratio = ratioUs();
+    if (ratio)
+    {
+      t *= ratio;
+      return true;
+    }
   }
   error("time unit expected (us, ms, s, mn");
   return false;
@@ -81,9 +128,13 @@ bool ScriptParser::getDuration(unsigned long &t)
 
 void ScriptParser::error(const std::string& s)
 {
-  std::cerr << "***" << std::endl;
-  std::cerr << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
-  std::cerr << "***" << std::endl;
+  if (displayErrors)
+  {
+    std::cerr << "***" << std::endl;
+    std::cerr << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
+    std::cerr << "***" << std::endl;
+  }
+  errors++;
 }
 
 }
