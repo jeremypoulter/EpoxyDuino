@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <thread>
+#include <set>
 #include <vector>
 
 #include <Arduino.h>
@@ -69,53 +70,51 @@ void Injector::operator()()
   run = true;
   while(run)
   {
-    long sleep_us=100;
+    long sleep_us=10;
     {
       std::lock_guard<std::mutex> lock(events_mutex);
-      auto us = micros();
+      long us = micros();
+      while(events.size() and events.begin()->second == nullptr)
+        events.erase(events.begin());
       if  (events.size())
       {
-        std::vector<Injector::Events::iterator> to_delete;
-        std::vector<Injector::Events::value_type> to_insert;
         auto it = events.begin();
-        unsigned long next = it->first;
-        if (us >= next)
+        long next = it->first;
+        if (us >= it->first)
         {
-          while(it->first == next)
+          Events to_insert;
+          while(events.size() and it->first == next)
           {
-            debug("injector raise " << next);
-            unsigned long sched = it->second->raise();
-            us = micros();
-            auto& chain = it->second->chain;
-            if (chain or sched)
+            if (it->second)
             {
+              auto& event = it->second;
+              debug("injector raise " << next);
+              long sched = event->raise();
+              auto& chain = event->chain;
               if (chain)
               {
                 debug("injector chain " << chain->name());
-                sleep_us = std::min(sleep_us, (long)(chain->us())-(long)us);
-                auto evt = std::move(chain);
-                to_delete.push_back(it);
-                to_insert.push_back(std::make_pair( evt->us(), std::move(evt)));
+                sleep_us = std::min(sleep_us, chain->us() - us);
+                to_insert.insert(std::make_pair(chain->us(), std::move(chain)));
               }
               if (sched)
               {
                 debug("injector sched " << sched);
-                auto evt = std::move(it->second);
-                sleep_us = std::min(sleep_us, (long)sched);
-                to_delete.push_back(it);
-                to_insert.push_back(std::make_pair( sched, std::move(evt)));
+                sleep_us = std::min(sleep_us, sched);
+                to_insert.insert(std::make_pair(sched, std::move(event)));
               }
+              it->second.reset();
             }
-            else
-              to_delete.push_back(it);
             it++;
           }
-          if (to_delete.size()) for(auto& it: to_delete) events.erase(it);
-          if (to_insert.size()) for(auto& pair: to_insert) events.insert(std::move(pair));
+          for(auto& pair: to_insert)
+          {
+            events.insert(std::move(pair));
+          }
         }
         else
         {
-          sleep_us = std::min(sleep_us, (long)next -  (long)us);
+          sleep_us = std::min(sleep_us, next -  us);
         }
       }
       if (do_reset)

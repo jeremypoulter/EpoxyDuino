@@ -1,0 +1,4 @@
+// at {time} event
+// schedule an event that's be ran at {time}
+at 500ms pin 4 1
+pin 4 0

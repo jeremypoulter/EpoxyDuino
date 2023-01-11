@@ -30,7 +30,7 @@ class Injector
 
   private:
     // microseconds => event
-    using Events = std::multimap<unsigned long, std::unique_ptr<Event>>;
+    using Events = std::multimap<long, std::unique_ptr<Event>>;
     static Events events;
     static std::mutex events_mutex;
     static Injector injector;

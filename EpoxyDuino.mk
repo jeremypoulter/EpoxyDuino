@@ -245,6 +245,8 @@ all: $(APP_NAME).out
 # errors and jump directly to the line where the assertion failed.
 run:
 	./$(APP_NAME).out
+debug:
+	gdb ./$(APP_NAME).out
 
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).

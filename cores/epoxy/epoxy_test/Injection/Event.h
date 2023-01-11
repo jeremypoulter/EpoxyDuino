@@ -22,7 +22,7 @@ class Event
 
     // return value : time to reschedule this
     // or 0 : delete the event
-    unsigned long us() { return us_; }
+    long us() { return us_; }
 
     std::unique_ptr<Event> chain = nullptr;
   private:
