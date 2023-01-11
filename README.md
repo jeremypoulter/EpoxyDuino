@@ -4,6 +4,73 @@
 
 Fork of the marvelous bxparks's EpoxyDuino https://github.com/bxparks/EpoxyDuino
 
+Main addition to bxpars repo are:
+- simulated time
+- script signal injection
+
+These features are available with `-DEPOXY_TEST` flag set during compilation.
+
+# Simulated time
+
+Time simulation allow to simulate time for millis() and micros().
+
+See https://github.com/hsaturn/EpoxyDuino/blob/develop/cores/epoxy/epoxy_test/ArduinoTest.h
+
+Such unit test becomes possible:
+
+``` c++
+test(DeviceConnect, timeout)
+{
+  EpoxyTest::reset();           // Reset the 'virtual' Esp
+  set_millis(0);		// 
+  DummyDevice device(1,3,7);	// dummy device that should connect
+  device.connect();
+  add_second(5);		// should be connected after 5s
+  assertEqual(device.connected(), true);
+}
+```
+
+A lot of work has to be done, but yet, the simulated time allowed me to make some timeout tests for the TinyMqtt project. (https://github.com/hsaturn/TinyMqtt)
+
+# Script injection
+
+Script injection allows to simulate some events on the device.
+For example, let say we want a unit test to wait for a signal raise on pin 6
+
+``` c++
+test(WaitRaise, up)
+{
+  while(digitalRead(14) == 0)
+  {
+     ... do something
+  }
+}
+```
+
+This loop while run forever because pin 14 is set to 0 at the beginning.
+Now let run a script in parallel so this unit test can pass :
+
+``` c++
+test(WaitRaise, up)
+{
+  EpoxyTest::Script raise("raise_pin_14.txt");
+  
+  while(digitalRead(14) == 0)
+  {
+     ... do something
+  }
+}
+```
+
+And in raise_pin_14.txt, we raise the pin after 2 seconds
+
+```
+// raise pin 14 after 2 seconds
+at 2s pin 14 1
+```
+ 
+ TODO continue doc with script features (sync bitstream pin numbers ...)
+ 
 This project contains a small (but often effective) implementation of the
 Arduino programming framework for Linux, MacOS, FreeBSD (experimental) and
 potentially other POSIX-like systems. Originally, it was created to allow
