@@ -12,7 +12,7 @@ namespace EpoxyTest
 {
 
 
-class ScriptEvent : public EpoxyInjection::Event, ScriptParser
+class ScriptEvent : public EpoxyInjection::Event, public ScriptParser
 {
   public:
     ScriptEvent(unsigned long us, Script*);

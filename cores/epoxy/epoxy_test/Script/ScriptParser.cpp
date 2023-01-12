@@ -41,6 +41,17 @@ void trim(std::string& line)
   while(line[0] == ' ' or line[0]=='\t') line.erase(0,1);
 }
 
+char ScriptParser::getChar()
+{
+  char c = 0;
+  if (line.length())
+  {
+    c = line[0];
+    line.erase(0,1);
+  }
+  return c;
+}
+
 bool ScriptParser::eatWord(const std::string &start, bool optional)
 {
   if (line == start)

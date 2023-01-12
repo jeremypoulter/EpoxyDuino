@@ -1,5 +1,6 @@
 #ifdef EPOXY_TEST
 
+#include <assert.h>
 #include <unistd.h>
 #include <iostream>
 #include <thread>
@@ -59,12 +60,21 @@ size_t Injector::eventsSize()
   return events.size();
 }
 
+void sleepus(unsigned long microseconds)
+{
+  assert(microseconds < 1000000);
+  struct timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = microseconds * 1000;
+  nanosleep(&ts, NULL);
+}
+
 void Injector::operator()()
 {
   run = true;
   while(run)
   {
-    long sleep_us=50;
+    long sleep_us=500;
     {
       std::lock_guard<std::mutex> lock(events_mutex);
       long us = micros();
@@ -82,7 +92,7 @@ void Injector::operator()()
             if (it->second)
             {
               auto& event = it->second;
-              debug("injector raise us=" << us << ':' << next);
+              debug("injector raise expected " << next << ", delta=" << (us - next));
               long sched = event->raise();
               auto& chain = event->chain;
               us = micros();
@@ -94,8 +104,8 @@ void Injector::operator()()
               }
               if (sched)
               {
-                debug("injector sched " << sched);
-                sleep_us = std::min(sleep_us, sched);
+                debug("injector sched " << sched << ", sz=" << events.size());
+                sleep_us = std::min(sleep_us, sched - us);
                 to_insert.insert(std::make_pair(sched, std::move(event)));
               }
               it->second.reset();
@@ -118,7 +128,11 @@ void Injector::operator()()
         do_reset = false;
       }
     }
-    if (sleep_us > 0) usleep(sleep_us);
+    if (sleep_us > 1)
+    {
+      // debug("sleep " << sleep_us);
+      sleepus(sleep_us);
+    }
   }
 }
 

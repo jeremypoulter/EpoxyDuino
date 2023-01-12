@@ -24,8 +24,9 @@ class ScriptParser
     int getLineNr() const { return line_nr; }
 
     std::string getWord() { return EpoxyTest::getWord(line); }
+    char getChar();
     template<typename T> bool getNumber(T &t);
-    int getPinNumber();
+    int getPinNumber();   // -1 if bad pin
     bool getDuration(unsigned long &t);
     void trim() { EpoxyTest::trim(line); }
     bool eatWord(const std::string &start, bool optional=false);

@@ -100,6 +100,22 @@ test(ScriptParser, periodUs)
   assertEqual(parser.periodUs(), 0); // kilo ?
 }
 
+test(ScriptParser, startsWith)
+{
+  std::string line("bitstream");;
+
+  assertEqual(EpoxyTest::startsWith(line, "bitstream"), true);
+  assertEqual(EpoxyTest::startsWith(line, "bitstreamer"), false);
+  assertEqual(EpoxyTest::startsWith(line, "bitstreap"), false);
+  assertEqual(EpoxyTest::startsWith(line, "bitstre"), false);
+
+  line = "bitstream "; // with space
+  assertEqual(EpoxyTest::startsWith(line, "bitstream"), true);
+
+  line = "bitstream\t"; // with space
+  assertEqual(EpoxyTest::startsWith(line, "bitstream"), true);
+}
+
 //---------------------------------------------------------------------------
 
 void setup() {

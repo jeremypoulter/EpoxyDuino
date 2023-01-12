@@ -1,0 +1,13 @@
+// bitstream {speed} {pin} {stream}
+//
+// speed is either a frequency or a period (1kHz, 100ms ...)
+// yet speed is only a period (us ms...) TODO
+//
+// Warning, period is not stable in real-time mode
+// one should not use periods less than 50ms if not
+// in simulated time.
+//
+// These two bitstreams will run in parallel
+// TODO add a bitstream option to wait till finished before continuing the script
+bitstream 100ms 5 10011101-11010110
+bitstream 150ms 6 11010010-10010101
