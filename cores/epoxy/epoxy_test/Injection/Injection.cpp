@@ -64,7 +64,7 @@ void Injector::operator()()
   run = true;
   while(run)
   {
-    long sleep_us=10;
+    long sleep_us=50;
     {
       std::lock_guard<std::mutex> lock(events_mutex);
       long us = micros();
@@ -82,13 +82,14 @@ void Injector::operator()()
             if (it->second)
             {
               auto& event = it->second;
-              debug("injector raise " << next);
+              debug("injector raise us=" << us << ':' << next);
               long sched = event->raise();
               auto& chain = event->chain;
+              us = micros();
               if (chain)
               {
-                debug("injector chain " << chain->name());
                 sleep_us = std::min(sleep_us, chain->us() - us);
+                debug("injector chain " << chain->us() << ", sleep=" << sleep_us << ", us=" << us << ": " << chain->name());
                 to_insert.insert(std::make_pair(chain->us(), std::move(chain)));
               }
               if (sched)
