@@ -36,7 +36,7 @@ Script::EventPtr Script::step(unsigned long delay)
     if (std::getline(*input, line))
     {
       line_nr++;
-      return Script::EventPtr(new ScriptEvent(micros()+delay, this));
+      return ScriptEvent::build(this, delay);
     }
   }
   return nullptr;

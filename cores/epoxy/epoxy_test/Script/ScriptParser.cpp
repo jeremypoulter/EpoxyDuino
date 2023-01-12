@@ -12,7 +12,7 @@
 namespace EpoxyTest
 {
 
-std::string ScriptParser::getWord()
+std::string getWord(std::string& line)
 {
   std::string word;
   while(line[0] && line[0] != ' ')
@@ -20,13 +20,25 @@ std::string ScriptParser::getWord()
     word += line[0];
     line.erase(0,1);
   }
-  trim();
+  trim(line);
   return word;
 }
 
-void ScriptParser::trim()
+bool startsWith(std::string& line, const char* start)
 {
-  while(line[0] == ' ') line.erase(0,1);
+  const char* p=line.c_str();
+  while(*p == *start)
+  {
+    if (*p==0 or *start==0) break;
+    p++; start++;
+  }
+  if (*start!=0) return false;
+  return *p==' ' or *p=='\t' or *p==0;
+}
+
+void trim(std::string& line)
+{
+  while(line[0] == ' ' or line[0]=='\t') line.erase(0,1);
 }
 
 bool ScriptParser::eatWord(const std::string &start, bool optional)

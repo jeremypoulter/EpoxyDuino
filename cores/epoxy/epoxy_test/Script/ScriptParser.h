@@ -9,6 +9,10 @@
 namespace EpoxyTest
 {
 
+std::string getWord(std::string& line);
+void trim(std::string& line);
+bool startsWith(std::string& line, const char* start);
+
 class ScriptParser
 {
   public:
@@ -19,11 +23,11 @@ class ScriptParser
     std::string getLine() const { return line; }
     int getLineNr() const { return line_nr; }
 
-    std::string getWord();
+    std::string getWord() { return EpoxyTest::getWord(line); }
     template<typename T> bool getNumber(T &t);
     int getPinNumber();
     bool getDuration(unsigned long &t);
-    void trim();
+    void trim() { EpoxyTest::trim(line); }
     bool eatWord(const std::string &start, bool optional=false);
     void error(const std::string&);
 
