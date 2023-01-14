@@ -1,11 +1,10 @@
-#ifdef EPOXY_TEST
-
 #include <assert.h>
 #include <unistd.h>
 #include <iostream>
 #include <thread>
 #include <set>
 #include <vector>
+#include <chrono>
 
 #include <Arduino.h>
 #include "Injection.h"
@@ -92,19 +91,19 @@ void Injector::operator()()
             if (it->second)
             {
               auto& event = it->second;
-              debug("injector raise expected " << next << ", delta=" << (us - next));
+              ep_debug("injector raise expected " << next << ", delta=" << (us - next));
               long sched = event->raise();
               auto& chain = event->chain;
               us = micros();
               if (chain)
               {
                 sleep_us = std::min(sleep_us, chain->us() - us);
-                debug("injector chain " << chain->us() << ", sleep=" << sleep_us << ", us=" << us << ": " << chain->name());
+                ep_debug("injector chain " << chain->us() << ", sleep=" << sleep_us << ", us=" << us << ": " << chain->name());
                 to_insert.insert(std::make_pair(chain->us(), std::move(chain)));
               }
               if (sched)
               {
-                debug("injector sched " << sched << ", sz=" << events.size());
+                ep_debug("injector sched " << sched << ", sz=" << events.size());
                 sleep_us = std::min(sleep_us, sched - us);
                 to_insert.insert(std::make_pair(sched, std::move(event)));
               }
@@ -130,12 +129,10 @@ void Injector::operator()()
     }
     if (sleep_us > 1)
     {
-      // debug("sleep " << sleep_us);
+      // ep_debug("sleep " << sleep_us);
       sleepus(sleep_us);
     }
   }
 }
 
 }
-
-#endif

@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef EPOXY_TEST
-#error "You should include <epoxy_test/script> instead of including this file."
-#endif
-
 #include <epoxy_test/Injection/Event.h>
 #include "Script.h"
 #include "ScriptParser.h"

@@ -1,5 +1,3 @@
-#ifdef EPOXY_TEST
-
 #include "DigitalInjector.h"
 #include <Arduino.h>
 #include <iostream>
@@ -15,6 +13,10 @@ namespace EpoxyInjection
         digitalReadValue(i, 0);
     });
   };
-}
 
-#endif
+  unsigned long DigitalInjectorEvent::raise()
+  {
+    digitalReadValue(pin_, val_);
+    return 0;
+  }
+}

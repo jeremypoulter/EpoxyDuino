@@ -1,10 +1,5 @@
 #pragma once
 
-#ifndef EPOXY_TEST
-#error "You must use -DEPOXY_TEST to include this file"
-#endif
-
-
 namespace EpoxyTest
 {
   // TODO call reset between each unit test from AUnit if possible

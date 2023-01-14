@@ -1,5 +1,3 @@
-#ifdef EPOXY_TEST
-
 #include "pins_arduino.h"
 
 namespace EpoxyTest
@@ -54,5 +52,3 @@ std::map<std::string, int> pins_arduino =
 };
 
 } // ns
-
-#endif

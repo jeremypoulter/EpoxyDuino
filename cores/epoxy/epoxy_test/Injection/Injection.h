@@ -5,10 +5,6 @@
 #include <mutex>
 #include <iostream>
 
-#ifndef EPOXY_TEST
-#error "You must not include this header, use <epoxy_test/injection> instead."
-#endif
-
 namespace EpoxyInjection
 {
 

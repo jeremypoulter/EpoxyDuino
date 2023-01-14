@@ -17,7 +17,7 @@ unsigned long BitStream::raise_()
   if (bit == '-' or bit==' ') bit = getChar();  // separators allowed
   if (bit == 0) return 0;
 
-  debug("BITSTREAM char(" << bit << ")");
+  ep_debug("BITSTREAM char(" << bit << ")");
   if (bit == '0')
   {
     digitalReadValue(pin, 0);

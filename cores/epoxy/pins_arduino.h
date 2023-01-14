@@ -10,10 +10,8 @@
   #include "pins_arduino_avr.h"
 #endif
 
-#ifdef EPOXY_TEST
 namespace EpoxyTest
 {
 	extern std::map<std::string, int> pins_arduino;
 }
-#endif
 

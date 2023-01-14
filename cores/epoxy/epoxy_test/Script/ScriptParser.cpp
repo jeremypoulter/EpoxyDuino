@@ -1,5 +1,3 @@
-#ifdef EPOXY_TEST
-
 #include <Arduino.h>
 #include <fstream>
 #include <iostream>
@@ -161,5 +159,3 @@ void ScriptParser::error(const std::string& s)
 }
 
 }
-
-#endif // EPOXY_TEST

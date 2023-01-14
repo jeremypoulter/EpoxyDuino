@@ -1,7 +1,4 @@
-#ifndef EPOXY_TEST
-#error "You must use -DEPOXY_TEST to include this file"
-#endif
-
+#include <epoxy_test/ArduinoTest.h>
 #include "Injection/Injection.h"
 #include "Injection/DigitalInjector.h"
 #include "Injection/Event.h"

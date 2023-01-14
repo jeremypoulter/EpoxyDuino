@@ -18,9 +18,7 @@
 #include <atomic>
 #include "Arduino.h"
 
-#ifdef EPOXY_TEST
 #include "epoxy_test/ArduinoTest.inc"
-#endif
 
 std::atomic<unsigned long> epoxy_micros;
 unsigned long epoxy_start_time = 0;

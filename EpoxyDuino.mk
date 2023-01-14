@@ -244,12 +244,14 @@ all: $(APP_NAME).out
 # the quickfix errorformat of vim, so vim will automatically detect assertion
 # errors and jump directly to the line where the assertion failed.
 run:
-	./$(APP_NAME).out
+	@echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
+	@./$(APP_NAME).out $(TESTS); \
+	echo "Return code: $$?"
+
 debug:
-	gdb ./$(APP_NAME).out
+	gdb --args ./$(APP_NAME).out $(TESTS)
 
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).
 clean: $(MORE_CLEAN)
-	@echo "    Cleaning..."
 	@rm -f $(OBJS) $(APP_NAME).out $(GENERATED)

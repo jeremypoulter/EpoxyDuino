@@ -34,7 +34,7 @@
 // FPSTR() is defined for ESP8266 and ESP32 Cores, but not AVR or SAMD Cores.
 class __FlashStringHelper;
 #define FPSTR(p) (reinterpret_cast<const __FlashStringHelper *>(p))
-#define F(s) FPSTR(PSTR(s))
+#define F(s) s
 
 // An inherited class for holding the result of a concatenation.  These
 // result objects are assumed to be writable by subsequent concatenations.

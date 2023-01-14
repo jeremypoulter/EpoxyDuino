@@ -3,6 +3,8 @@
 #include <set>
 #include <iostream>
 
+#include <epoxy_test/ArduinoTest.h>
+
 extern std::atomic<unsigned long> epoxy_micros;
 extern bool epoxy_real_time;
 extern unsigned long epoxy_start_time;

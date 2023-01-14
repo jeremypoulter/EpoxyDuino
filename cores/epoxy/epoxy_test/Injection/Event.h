@@ -4,15 +4,11 @@
 #include <memory>
 #include <mutex>
 
-#ifndef EPOXY_TEST
-#error "You must not include this header, use <epoxy_test/injection> instead."
-#endif
-
 #ifdef EPOXY_TEST_DEBUG
 #include <iostream>
-#define debug(args) { std::cout  << micros() << ' ' << args << std::endl; }
+#define ep_debug(args) { std::cout  << micros() << ' ' << args << std::endl; }
 #else
-#define debug(args)
+#define ep_debug(args)
 #endif
 
 

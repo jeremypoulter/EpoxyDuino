@@ -1,5 +1,3 @@
-#ifdef EPOXY_TEST
-
 #include "ScriptEvent.h"
 #include "ScriptParser.h"
 
@@ -32,7 +30,7 @@ ScriptEvent::ScriptEvent(const char* command)
   {
     std::cerr << "*** ScriptEvent, registring more than once: " << command << std::endl;
   }
-  debug("=== Registering Script Command '" << command << "'");
+  ep_debug("=== Registering Script Command '" << command << "'");
   (*commands)[command] = this;
 }
 
@@ -54,7 +52,7 @@ Script::EventPtr ScriptEvent::build(Script *script, unsigned long delay)
 
 unsigned long ScriptEvent::raise()
 {
-  debug (" raise : " << name());
+  ep_debug(" raise : " << name());
   next_step = 0;
   unsigned long resched = raise_();
   trim();
@@ -68,7 +66,7 @@ unsigned long ScriptEvent::raise()
       auto us = micros();
       if (us > next_step)
       {
-        debug("desync " << (us - next_step) << "us...");
+        ep_debug("desync " << (us - next_step) << "us...");
         next_step = 0;
       }
       else
@@ -121,5 +119,3 @@ unsigned long ScriptEvent::raise_()
 }
 
 } // ns
-
-#endif // EPOXY_TEST

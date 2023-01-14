@@ -15,11 +15,7 @@ class DigitalInjectorEvent : public Event
     pin_(pin),
     val_(val) {}
 
-    unsigned long raise() override
-    {
-      digitalReadValue(pin_, val_);
-      return 0;
-    }
+    unsigned long raise() override;
 
   private:
     uint8_t pin_;

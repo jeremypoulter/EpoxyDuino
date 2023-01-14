@@ -13,9 +13,7 @@
 #ifndef EPOXY_DUINO_EPOXY_ARDUINO_H
 #define EPOXY_DUINO_EPOXY_ARDUINO_H
 
-#ifdef EPOXY_TEST
-#include "epoxy_test/ArduinoTest.h"
-#endif
+#include <epoxy_test/ArduinoTest.h>
 
 // xx.yy.zz => xxyyzz (without leading 0)
 #define EPOXY_DUINO_VERSION 10500

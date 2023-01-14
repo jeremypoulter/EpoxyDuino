@@ -1,9 +1,7 @@
-#ifndef EPOXY_DUINO_ESP_H
-#define EPOXY_DUINO_ESP_H
-
-#if defined(EPOXY_CORE_ESP8266)
+#pragma once
 
 #include <sys/time.h>
+#include <epoxy_test/injection>
 #include "Stream.h"
 
 class EspClass
@@ -15,9 +13,7 @@ class EspClass
 
     void reset()
     {
-#ifdef EPOXY_TEST
       EpoxyTest::reset();
-#endif
     };
 
     // Very ugly approximation, this is freeStack
@@ -45,6 +41,3 @@ class Serial_ : public Stream
 };
 
 extern EspClass ESP;
-
-#endif
-#endif

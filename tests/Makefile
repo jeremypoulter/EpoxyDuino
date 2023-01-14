@@ -7,31 +7,40 @@
 # between each iteration of the `for` loop. Most applications do NOT need to do
 # that.
 SUB=
+CLEAN=0
+MAKEOPTS=--no-print-directory
+RECIPES=clean all run
 
 tests:
 	@set -e; \
-	for i in $(SUB)*Test/Makefile; do \
-		echo "==== Making:' $$(dirname $$i)"; \
-		echo "==== Cleaning $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i) clean; \
-		echo "==== Buidling $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i); \
+  for folder in $(SUB)*Test/Makefile; do \
+	  for recipe in clean ""; do \
+	     echo "=== $$recipe $$(dirname $$folder)"; \
+       $(MAKE) $(MAKEOPTS) -C $$(dirname $$folder) $$recipe; \
+     done; \
+	done
+
+debug:
+	@set -e; \
+	for folder in $(SUB)*Test/Makefile; do \
+	  for recipe in $(RECIPES) debug; do \
+	     echo "=== $$recipe $$(dirname $$folder)"; \
+       $(MAKE) $(MAKEOPTS) -C $$(dirname $$folder) $$recipe; \
+     done; \
 	done
 
 runtests:
 	@set -e; \
-	for i in $(SUB)*Test/Makefile; do \
-		echo "==== Cleaning $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i) clean; \
-		echo "==== Buidling $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i) all; \
-		echo "==== Running $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i) run; \
+	for recipe in $(RECIPES) run; do \
+    for folder in $(SUB)*Test/Makefile; do \
+	     echo "=== $$recipe $$(dirname $$folder)"; \
+       $(MAKE) $(MAKEOPTS) -C $$(dirname $$folder) $$recipe; \
+     done; \
 	done
 
 clean:
 	@set -e; \
 	for i in $(SUB)*Test/Makefile; do \
-		echo "==== Cleaning:' $$(dirname $$i)"; \
-		$(MAKE) -C $$(dirname $$i) clean; \
+		echo "=== Cleaning:' $$(dirname $$i)"; \
+		$(MAKE) $(MAKEOPTS) -C $$(dirname $$i) clean; \
 	done

@@ -1,5 +1,3 @@
-#ifdef EPOXY_TEST
-
 #include "Script.h"
 #include "ScriptEvent.h"
 
@@ -44,5 +42,3 @@ Script::EventPtr Script::step(unsigned long delay)
 }
 
 }
-
-#endif
