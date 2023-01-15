@@ -162,7 +162,7 @@ CPPFLAGS_EXPANSION = -I$(module) -I$(module)/src
 CPPFLAGS += $(foreach module,$(EPOXY_MODULES),$(CPPFLAGS_EXPANSION))
 
 # Linker settings (e.g. -lm).
-LDFLAGS ?=
+LDFLAGS ?= -lpthread
 
 # Collect list of C and C++ srcs to compile.
 #
