@@ -1,4 +1,5 @@
 # Include this Makefile to compile an Arduino *.ino file on Linux or MacOS.
+
 # vim: ts=4:noexpandtab
 #
 # Create a 'Makefile' in the sketch folder. For example, for the
@@ -129,17 +130,18 @@ EPOXY_MODULES += \
 # specify additional flags to CXXFLAGS and CFLAGS.
 ifeq ($(UNAME), Linux)
 CXX ?= g++
-CXXFLAGS ?= -Wextra -Wall -std=gnu++11 -flto \
+CVER ?=14
+CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -flto \
 	-fno-exceptions -fno-threadsafe-statics
-CFLAGS ?= -Wextra -Wall -std=c11 -flto
+CFLAGS ?= -Wextra -Wall -std=c$(CVER) -flto
 else ifeq ($(UNAME), Darwin)
 CXX ?= clang++
-CXXFLAGS ?= -Wextra -Wall -std=c++11 -stdlib=libc++
-CFLAGS ?= -Wextra -Wall -std=c11
+CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -stdlib=libc++
+CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 else ifeq ($(UNAME), FreeBSD)
 CXX ?= clang++
-CXXFLAGS ?= -Wextra -Wall -std=c++11 -stdlib=libc++
-CFLAGS ?= -Wextra -Wall -std=c11
+CXXFLAGS ?= -Wextra -Wall -std=c++($C) -stdlib=libc++
+CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 endif
 CXXFLAGS += $(EXTRA_CXXFLAGS)
 CFLAGS += $(EXTRA_CFLAGS)
@@ -209,7 +211,7 @@ OBJS +=$(APP_NAME).o
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
 	@echo "    Linking $<"
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
