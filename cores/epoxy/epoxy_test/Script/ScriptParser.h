@@ -9,6 +9,12 @@ std::string getWord(std::string& line);
 void trim(std::string& line);
 bool startsWith(std::string& line, const char* start);
 
+/**
+  * This class allows to parse text file, and get argument values
+  * with units or map replacement.
+  *
+  * All functions are eating some characters from the line member of the instance.
+  */
 class ScriptParser
 {
   public:
@@ -22,20 +28,42 @@ class ScriptParser
     std::string getWord() { return EpoxyTest::getWord(line); }
     char getChar();
     template<typename T> bool getNumber(T &t);
+    /**
+      * Resolve the symbolic pin with pins_arduino.h if value is text
+      */
     int getPinNumber();   // -1 if bad pin
+    /**
+      * Get a duration is microseconds. Time conversion is done.
+      * ex: 1ms will return 1000. The time unit is expected.
+      */
     bool getDuration(unsigned long &t);
     void trim() { EpoxyTest::trim(line); }
     bool eatWord(const std::string &start, bool optional=false);
     void error(const std::string&);
 
-    // Convert 1ms to 1000, 1MHz to 1 etc...
+    /** Try to convert something to a number of microseconds.
+      * This function uses ratioUs() and periodUs() in order
+      * to get the right value.
+      * Duration: 1ms will return 1000 etc.
+      * Frequency: 100Hz will return 10000
+      * @return 0 if no conversion is possible
+      */
     int getPeriodUs();
 
-    // Return the ratio for conversion to microseconds or 0 (no unit)
+    /** Gives the number of us in the duration unit
+      * 1ms will return 1000 etc.
+      * @return 0 if no unit
+      */
     int ratioUs();
-    // Return the period in microseconds of the unit or 0 (no unit)
+
+    /** Gives the period of frequency unit.
+      * 100Hz will give 10000, it is planned to add bauds
+      * @return 0 if no unit
+      */
     int periodUs();
 
+    /**
+      * @return Total number of errors encountered */
     int errorsCount() const { return errors; }
 
   protected:
