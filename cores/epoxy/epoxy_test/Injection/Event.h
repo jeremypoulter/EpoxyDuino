@@ -11,8 +11,6 @@
 #define ep_debug(args)
 #endif
 
-
-
 namespace EpoxyInjection
 {
 

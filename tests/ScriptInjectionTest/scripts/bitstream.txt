@@ -9,5 +9,5 @@
 //
 // These two bitstreams will run in parallel
 // TODO add a bitstream option to wait till finished before continuing the script
-bitstream 100ms 5 10011101-11010110
-bitstream 150ms 6 11010010-10010101
+bitstream 10ms 5 10011101-11010110
+bitstream 15ms 6 11010010-10010101

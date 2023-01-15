@@ -23,6 +23,7 @@ Injector::Events Injector::events;
 std::mutex Injector::events_mutex;
 std::atomic<bool> Injector::run{false};
 std::atomic<bool> Injector::do_reset{false};
+std::atomic<long> Injector::maxJitter_(0);
 
 Event::Event(unsigned long time_us)
 {
@@ -91,7 +92,9 @@ void Injector::operator()()
             if (it->second)
             {
               auto& event = it->second;
-              ep_debug("injector raise expected " << next << ", delta=" << (us - next));
+              long jitter = micros() - next;
+              ep_debug("injector raise expected " << next << ", jitter=" << jitter << ", max=" << maxJitter_);
+              if (jitter > maxJitter_) maxJitter_ = jitter;
               long sched = event->raise();
               auto& chain = event->chain;
               us = micros();
@@ -126,11 +129,6 @@ void Injector::operator()()
         events.clear();
         do_reset = false;
       }
-    }
-    if (sleep_us > 1)
-    {
-      // ep_debug("sleep " << sleep_us);
-      sleepus(sleep_us);
     }
   }
 }

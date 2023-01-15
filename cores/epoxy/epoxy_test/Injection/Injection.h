@@ -24,6 +24,8 @@ class Injector
     // Thread calls
     void operator()();
 
+    static long maxJitter() { return maxJitter_; }
+
   private:
     // microseconds => event
     using Events = std::multimap<long, std::unique_ptr<Event>>;
@@ -32,6 +34,7 @@ class Injector
     static Injector injector;
     static std::atomic<bool> run;
     static std::atomic<bool> do_reset;
+    static std::atomic<long> maxJitter_;
 };
 
 }
