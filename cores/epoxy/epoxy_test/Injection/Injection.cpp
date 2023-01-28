@@ -18,34 +18,52 @@ extern bool epoxy_real_time;
 namespace EpoxyInjection
 {
 
-Injector Injector::injector;
 Injector::Events Injector::events;
 std::mutex Injector::events_mutex;
 std::atomic<bool> Injector::run{false};
 std::atomic<bool> Injector::do_reset{false};
 std::atomic<long> Injector::maxJitter_(0);
+static std::unique_ptr<Injector> injector;
+static std::atomic<bool> stop_start(true);
 
-Event::Event(unsigned long time_us)
-{
-  us_ = time_us;
-}
+static std::atomic<int> instances(0); // Only one instance allowed
 
 Injector::Injector()
+  : thr(Injector::loop)
 {
-  EpoxyTest::registerReset(reset);
-  std::thread(*this).detach();
-  while(not run);
+  assert(instances == 0);
+  instances++;
 }
 
 Injector::~Injector()
 {
   run = false;
+  thr.join();
+  events.clear();
+  instances--;
 }
 
-void Injector::reset()
+void Injector::start()
 {
-  do_reset = true;
-  while(do_reset);
+  if (stop_start.exchange(false))
+  {
+    if (injector == nullptr)
+    {
+      injector = std::unique_ptr<Injector>(new Injector());
+      EpoxyTest::registerReset(stop);
+      while(not run);
+    }
+    stop_start = true;
+  }
+}
+
+void Injector::stop()
+{
+  if (stop_start.exchange(false))
+  {
+    if (injector) injector.reset();
+    stop_start = true;
+  }
 }
 
 void Injector::addEvent(std::unique_ptr<Event> event)
@@ -69,7 +87,7 @@ void sleepus(unsigned long microseconds)
   nanosleep(&ts, NULL);
 }
 
-void Injector::operator()()
+void Injector::loop()
 {
   run = true;
   while(run)

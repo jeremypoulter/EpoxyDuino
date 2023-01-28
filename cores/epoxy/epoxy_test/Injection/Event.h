@@ -32,6 +32,7 @@ class Event
     std::unique_ptr<Event> chain = nullptr;
   private:
     unsigned long us_;  // micros() at which wake up
+    static std::atomic<int> count;
 };
 
 }

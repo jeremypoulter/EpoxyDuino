@@ -1,5 +1,3 @@
-#line 2 "DigitalReadTest"
-
 #include <epoxy_test/Script/Script.h>
 #include <epoxy_test/Script/Commands/BitStream.h>
 #include <Arduino.h>
