@@ -56,7 +56,7 @@ void Injector::addEvent(std::unique_ptr<Event> event)
 
 size_t Injector::eventsSize()
 {
-  std::lock_guard<std::mutex> lock(mutex);
+  std::lock_guard<std::mutex> lock(events_mutex);
   return events.size();
 }
 
