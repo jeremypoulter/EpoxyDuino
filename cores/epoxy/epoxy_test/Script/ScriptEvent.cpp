@@ -21,7 +21,6 @@ ScriptEvent::ScriptEvent(unsigned long us, Script* script, std::string& params)
 {}
 
 ScriptEvent::ScriptEvent(const char* command)
-  : Event(0)
 {
   if (commands == nullptr)
     commands = std::unique_ptr<Commands>(new Commands);
