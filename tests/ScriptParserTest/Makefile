@@ -5,4 +5,5 @@ EXTRA_CXXFLAGS=-g3 -O0
 
 APP_NAME := ScriptParserTest
 ARDUINO_LIBS := AUnit
-include ../../EpoxyDuino.mk
+
+include ../next.mk

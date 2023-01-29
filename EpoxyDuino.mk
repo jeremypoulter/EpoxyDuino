@@ -210,20 +210,20 @@ OBJS +=$(APP_NAME).o
 
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
-	@echo "    Linking $<"
+	echo "    Linking $(compiler) $<"
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
-	@echo "    Compiling $<"
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
+	echo "    Compiling $(compiler) $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
 
 # We don't need this rule because the implicit GNU Make rules for converting
 # *.c and *.cpp into *.o files are sufficient.
 #
 %.o: %.cpp
-	@echo "    Compiling $<"
-	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	echo "    Compiling $(compiler) $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # The following simple rules do not capture all header dependencies of a given
 # *.cpp or *.c file. It's probably better to make each *.cpp and *.c to depend
@@ -246,8 +246,8 @@ all: $(APP_NAME).out
 # the quickfix errorformat of vim, so vim will automatically detect assertion
 # errors and jump directly to the line where the assertion failed.
 run:
-	@echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
-	@./$(APP_NAME).out $(TESTS); \
+	echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
+	./$(APP_NAME).out $(TESTS); \
 	echo "Return code: $$?"
 
 debug:
@@ -256,4 +256,4 @@ debug:
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).
 clean: $(MORE_CLEAN)
-	@rm -f $(OBJS) $(APP_NAME).out $(GENERATED)
+	rm -f $(OBJS) $(APP_NAME).out $(GENERATED)

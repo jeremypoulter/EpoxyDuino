@@ -4,4 +4,5 @@
 APP_NAME := IPAddressTest
 ARDUINO_LIBS := AUnit AceCommon
 EPOXY_CORE := EPOXY_CORE_ESP8266
-include ../../EpoxyDuino.mk
+
+include ../next.mk
