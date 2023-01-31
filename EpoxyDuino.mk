@@ -247,8 +247,7 @@ all: $(APP_NAME).out
 # errors and jump directly to the line where the assertion failed.
 run:
 	echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
-	./$(APP_NAME).out $(TESTS); \
-	echo "Return code: $$?"
+	./$(APP_NAME).out $(TESTS)
 
 debug:
 	gdb --args ./$(APP_NAME).out $(TESTS)

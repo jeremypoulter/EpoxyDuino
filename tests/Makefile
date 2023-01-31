@@ -1,11 +1,11 @@
+# vim: noexpandtab
 # make help for more infos
 
-
+folder?=ScriptInjection
 compiler?=gcc
-folder?=
 jobs?=4
 MAKEOPTS=--no-print-directory compiler=$(compiler)
-RECIPES=clean all run
+RECIPES=clean all
 
 $(info MAKEOPTS : $(MAKEOPTS))
 
