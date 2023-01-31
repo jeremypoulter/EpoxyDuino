@@ -216,14 +216,14 @@ $(APP_NAME).out: $(OBJS)
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
 	echo "    Compiling $(compiler) $<"
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $(abspath $<)
 
 # We don't need this rule because the implicit GNU Make rules for converting
 # *.c and *.cpp into *.o files are sufficient.
 #
 %.o: %.cpp
 	echo "    Compiling $(compiler) $<"
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(abspath $<) -o $@
 
 # The following simple rules do not capture all header dependencies of a given
 # *.cpp or *.c file. It's probably better to make each *.cpp and *.c to depend
