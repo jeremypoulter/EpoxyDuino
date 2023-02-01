@@ -97,7 +97,7 @@ unsigned long micros() {
   }
   else
   {
-    return 1000*epoxy_micros;
+    return epoxy_micros;
   }
 }
 
