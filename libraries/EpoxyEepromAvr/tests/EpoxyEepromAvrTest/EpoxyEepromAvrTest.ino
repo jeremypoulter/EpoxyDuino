@@ -1,5 +1,3 @@
-#line 2 "EpoxyEepromAvrTest.ino"
-
 #include <Arduino.h>
 #include <AUnit.h>
 #include <EpoxyEepromAvr.h>

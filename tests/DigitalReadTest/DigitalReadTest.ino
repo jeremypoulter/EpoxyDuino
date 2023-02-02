@@ -1,5 +1,3 @@
-#line 2 "DigitalReadTest"
-
 #include <Arduino.h>
 #include <AUnit.h>
 

@@ -1,5 +1,3 @@
-#line 2 "DigitalReadTest"
-
 #include <epoxy_test/injection>
 #include <Arduino.h>
 #include <AUnit.h>
