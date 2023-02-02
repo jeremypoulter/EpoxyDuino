@@ -9,6 +9,4 @@ else
 endif
 EXTRA_CXXFLAGS+=-g3 -O0
 
-.SILENT:
-
 include ../../EpoxyDuino.mk

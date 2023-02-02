@@ -1,3 +1,4 @@
+.SILENT:
 # Include this Makefile to compile an Arduino *.ino file on Linux or MacOS.
 
 # vim: ts=4:noexpandtab
