@@ -36,6 +36,8 @@ void reset()
   if (resets)
     for(auto rst: *resets)
       rst();
+  epoxy_micros = 0;
+  epoxy_real_time = true;
 }
 
 void set_real_time()

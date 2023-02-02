@@ -17,6 +17,7 @@
 #include <time.h> // clock_gettime()
 #include <atomic>
 #include "Arduino.h"
+#include <epoxy_test/Injection/Injection.h>
 
 #include "epoxy_test/ArduinoTest.inc"
 
@@ -112,7 +113,7 @@ void delay(unsigned long ms) {
   }
   else
   {
-    epoxy_micros += 1000 * ms;
+    EpoxyInjection::Injector::delay_us(1000 * ms);
   }
 }
 

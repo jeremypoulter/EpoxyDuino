@@ -21,6 +21,7 @@ class ScriptParser
     ScriptParser(std::string line, int nr, bool display_errors=true)
     : line(line), line_nr(nr), displayErrors(display_errors) {}
     ScriptParser() {}
+    virtual ~ScriptParser() = default;
 
     std::string getLine() const { return line; }
     int getLineNr() const { return line_nr; }

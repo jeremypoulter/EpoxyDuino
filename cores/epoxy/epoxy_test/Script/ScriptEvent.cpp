@@ -97,7 +97,7 @@ unsigned long ScriptEvent::raise_()
   {
     int pin = getPinNumber();
     int val = getPinNumber();
-    // std::cout << micros() << " Setting pin " << pin << " to " << val << std::endl;
+    ep_debug(micros() << " Setting pin " << pin << " to " << val);
     digitalReadValue(pin, val);
   }
   else if (action == "wait")

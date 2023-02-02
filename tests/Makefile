@@ -1,7 +1,7 @@
 # vim: noexpandtab
 # make help for more infos
 
-folder?=SimulatedTime
+folder?=
 compiler?=gcc
 jobs?=4
 clearn?=0

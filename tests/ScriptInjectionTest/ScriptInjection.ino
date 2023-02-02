@@ -6,11 +6,25 @@
 
 using aunit::TestRunner;
 
+test(ScriptInjection, multiple_direct_scripts)
+{
+  EpoxyTest::reset();
+  EpoxyTest::Script s1("script:pin D1 0");
+  EpoxyTest::Script s2("script:at 100ms pin D1 1");
+  EpoxyTest::Script s3("script:at 200ms pin D1 0");
+
+  assertEqual(digitalRead(1), 0);
+  while(millis() <= 110) delay(10);
+  assertEqual(digitalRead(1), 1);
+  while(millis() <= 210) delay(10);
+  assertEqual(digitalRead(1), 0);
+}
+
 //---------------------------------------------------------------------------
 test(ScriptInjection, pin)
 {
   EpoxyTest::reset();
-  EpoxyTest::Script script("scripts/script.txt");
+  EpoxyTest::Script script("file:scripts/script.txt");
 
   assertEqual(digitalRead(1), 0);
   while(millis() <= 110) delay(10);

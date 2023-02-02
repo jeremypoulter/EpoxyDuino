@@ -24,13 +24,15 @@ std::atomic<bool> Injector::run{false};
 std::atomic<bool> Injector::do_reset{false};
 std::atomic<long> Injector::maxJitter_(0);
 static std::unique_ptr<Injector> injector;
-static std::atomic<bool> stop_start(true);
+static std::atomic<bool> stop_start(true);  // kind of mutex for start() and stop()
+std::atomic<unsigned long> Injector::time_forward_us{0};
 
 static std::atomic<int> instances(0); // Only one instance allowed
 
 Injector::Injector()
   : thr(Injector::loop)
 {
+  EpoxyTest::registerReset(strong_stop);
   assert(instances == 0);
   instances++;
 }
@@ -41,6 +43,8 @@ Injector::~Injector()
   thr.join();
   events.clear();
   instances--;
+  auto us = time_forward_us.exchange(0);
+  epoxy_micros += us;
 }
 
 void Injector::start()
@@ -50,10 +54,17 @@ void Injector::start()
     if (injector == nullptr)
     {
       injector = std::unique_ptr<Injector>(new Injector());
-      EpoxyTest::registerReset(stop);
       while(not run);
     }
     stop_start = true;
+  }
+}
+
+void Injector::strong_stop()
+{
+  while(eventsSize())
+  {
+    Injector::stop();
   }
 }
 
@@ -92,16 +103,15 @@ void Injector::loop()
   run = true;
   while(run)
   {
-    long sleep_us=500;
     {
       std::lock_guard<std::mutex> lock(events_mutex);
-      long us = micros();
+      unsigned long us = micros();
       while(events.size() and events.begin()->second == nullptr)
         events.erase(events.begin());
       if  (events.size())
       {
         auto it = events.begin();
-        long next = it->first;
+        unsigned long next = it->first;
         if (us >= it->first)
         {
           Events to_insert;
@@ -111,21 +121,19 @@ void Injector::loop()
             {
               auto& event = it->second;
               long jitter = micros() - next;
-              ep_debug("injector raise expected " << next << ", jitter=" << jitter << ", max=" << maxJitter_);
+              ep_debug("injector raise expected " << next << ", jitter=" << jitter << ", max=" << maxJitter_ << ": " << event->name());
               if (jitter > maxJitter_) maxJitter_ = jitter;
               long sched = event->raise();
               auto& chain = event->chain;
               us = micros();
               if (chain)
               {
-                sleep_us = std::min(sleep_us, chain->us() - us);
-                ep_debug("injector chain " << chain->us() << ", sleep=" << sleep_us << ", us=" << us << ": " << chain->name());
+                ep_debug("injector chain " << chain->us() << ", us=" << us << chain->name());
                 to_insert.insert(std::make_pair(chain->us(), std::move(chain)));
               }
               if (sched)
               {
                 ep_debug("injector sched " << sched << ", sz=" << events.size());
-                sleep_us = std::min(sleep_us, sched - us);
                 to_insert.insert(std::make_pair(sched, std::move(event)));
               }
               it->second.reset();
@@ -137,9 +145,34 @@ void Injector::loop()
             events.insert(std::move(pair));
           }
         }
+      }
+      // Simulated time
+      if (time_forward_us)
+      {
+        auto it = events.begin();
+        unsigned long add_us = 10;
+        if (it != events.end())
+        {
+          while(it != events.end())
+          {
+            if (it->second)
+            {
+              if (it->first <= micros())
+                add_us = 0;
+              break;
+            }
+            it++;
+          }
+        }
+        if (add_us > time_forward_us)
+        {
+          epoxy_micros += time_forward_us;
+          time_forward_us = 0;
+        }
         else
         {
-          sleep_us = std::min(sleep_us, next -  us);
+          epoxy_micros+=add_us;
+          time_forward_us -= add_us;
         }
       }
       if (do_reset)
@@ -149,6 +182,17 @@ void Injector::loop()
       }
     }
   }
+}
+
+void Injector::delay_us(unsigned long us)
+{
+  if (injector)
+  {
+    time_forward_us += us;
+    while(time_forward_us);
+  }
+  else
+    epoxy_micros += us;
 }
 
 }
