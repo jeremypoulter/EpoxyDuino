@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <AUnit.h>
+#include <aunit/Test.h>
 
 using aunit::TestRunner;
 
@@ -35,6 +36,7 @@ test(DigitalReadTest, digitalReadValue_valid) {
 //---------------------------------------------------------------------------
 
 void setup() {
+  aunit::Test::displayMinPosition(50);
 #if ! defined(EPOXY_DUINO)
   delay(1000); // wait to prevent garbage on SERIAL_PORT_MONITOR
 #endif
