@@ -149,12 +149,9 @@ bool ScriptParser::getDuration(unsigned long &t)
 
 void ScriptParser::error(const std::string& s)
 {
-  if (displayErrors)
-  {
-    std::cerr << "***" << std::endl;
-    std::cerr << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
-    std::cerr << "***" << std::endl;
-  }
+  std::cerr << "***" << std::endl;
+  std::cerr << "*** Script error at line #" << line_nr << ", (" << line << ") : " << s << std::endl;
+  std::cerr << "***" << std::endl;
   errors++;
 }
 

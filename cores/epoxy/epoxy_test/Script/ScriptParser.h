@@ -18,9 +18,8 @@ bool startsWith(std::string& line, const char* start);
 class ScriptParser
 {
   public:
-    ScriptParser(std::string line, int nr, bool display_errors=true)
-    : line(line), line_nr(nr), displayErrors(display_errors) {}
-    ScriptParser() {}
+    ScriptParser(std::string line, int nr) : line(line), line_nr(nr) {}
+    ScriptParser() = default;
     virtual ~ScriptParser() = default;
 
     std::string getLine() const { return line; }
@@ -71,7 +70,6 @@ class ScriptParser
     std::string line;
     int line_nr=0;
     int errors=0;
-    bool displayErrors;
 };
 
 template<typename T>

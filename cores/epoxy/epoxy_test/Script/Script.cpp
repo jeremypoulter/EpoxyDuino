@@ -26,6 +26,10 @@ Script::Script(std::string url)
   if (type == "file")
   {
     std::ifstream* in = new std::ifstream(url);
+    if (not in->good())
+    {
+      error(std::string("Unable to open script file:")+url);
+    }
     init(in);
   }
   else if (type == "script")
@@ -68,7 +72,13 @@ Script::EventPtr Script::step(unsigned long delay)
     if (std::getline(*input, line))
     {
       line_nr++;
-      return ScriptEvent::build(this, delay);
+      auto ptr = ScriptRegistry::build(line, this, delay);
+      if (ptr)
+        return ptr;
+      else
+      {
+        return std::make_unique<ScriptEvent>(micros()+delay, this);
+      }
     }
   }
   return {};

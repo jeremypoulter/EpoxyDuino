@@ -5,7 +5,12 @@ namespace EpoxyTest
 
 long BitStream::out_of_sync = 0;
 
-BitStream BitStream::registry("bitstream");
+ScriptRegistry BitStream::registry(
+  "bitstream",
+  [](Script* script, unsigned long us, std::string& params) -> Script::EventPtr
+  { return std::make_unique<BitStream>(script, us, params); }
+
+);
 
 unsigned long BitStream::raise_()
 {
@@ -48,17 +53,12 @@ unsigned long BitStream::raise_()
   }
 }
 
-BitStream::BitStream(unsigned long us, Script* script, std::string& params)
+BitStream::BitStream(Script* script, unsigned long us, std::string& params)
   : ScriptEvent(us, script, params)
 {
   getDuration(period_us);
   pin = getPinNumber();
   next_us = micros();
-}
-
-Script::EventPtr BitStream::clone(unsigned long us, Script* script, std::string& params)
-{
-  return Script::EventPtr(new BitStream(us, script, params));
 }
 
 }

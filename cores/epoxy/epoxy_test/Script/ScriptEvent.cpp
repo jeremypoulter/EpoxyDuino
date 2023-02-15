@@ -4,8 +4,6 @@
 namespace EpoxyTest
 {
 
-std::unique_ptr<ScriptEvent::Commands> ScriptEvent::commands;
-
 ScriptEvent::ScriptEvent(unsigned long us, Script* script)
   : Event(us)
   , ScriptParser(script->getLine(), script->getLineNr())
@@ -19,35 +17,6 @@ ScriptEvent::ScriptEvent(unsigned long us, Script* script, std::string& params)
   , ScriptParser(params, script->getLineNr())
   , script(script)
 {}
-
-ScriptEvent::ScriptEvent(const char* command)
-{
-  if (commands == nullptr)
-    commands = std::unique_ptr<Commands>(new Commands);
-
-  if (commands->find(command) != commands->end())
-  {
-    std::cerr << "*** ScriptEvent, registring more than once: " << command << std::endl;
-  }
-  ep_debug("=== Registering Script Command '" << command << "'");
-  (*commands)[command] = this;
-}
-
-Script::EventPtr ScriptEvent::build(Script *script, unsigned long delay)
-{
-  unsigned long start = micros() + delay;
-  if (commands)
-  {
-    std::string line(script->getLine());
-    auto it=commands->find(EpoxyTest::getWord(line));
-    if (it != commands->end())
-    {
-      return it->second->clone(start, script, line);
-    }
-  }
-
-  return Script::EventPtr(new ScriptEvent(start, script));
-}
 
 unsigned long ScriptEvent::raise()
 {
@@ -111,7 +80,9 @@ unsigned long ScriptEvent::raise_()
   }
   else
   {
-    error(std::string("Unknown script command: ") + action);
+    chain = ScriptRegistry::build(action+' '+line, script, 0);
+    // std::cout << "Chain " << line << " = " << chain.get() << std::endl;
+    // FIXME, if build returns {} here, we may loop forever because we may return here each loop
     line = "";
   }
  return 0;

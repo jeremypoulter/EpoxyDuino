@@ -1,5 +1,6 @@
 #pragma once
 #include "../ScriptEvent.h"
+#include "../ScriptRegistry.h"
 
 namespace EpoxyTest
 {
@@ -7,18 +8,13 @@ namespace EpoxyTest
 class BitStream : public ScriptEvent
 {
   public:
+    BitStream(Script*, unsigned long us, std::string& params);
     static long outOfSyncCount() { return out_of_sync; } 
-  protected:
-    BitStream(const char* command) : ScriptEvent(command) {};
 
+  protected:
     virtual unsigned long raise_();
-    virtual Script::EventPtr clone(unsigned long /* us */, Script*, std::string& /* parameters */);
 
   private:
-
-    BitStream(unsigned long us, Script*, std::string& params);
-
-    static BitStream registry;
 
     int pin;
 
@@ -26,6 +22,8 @@ class BitStream : public ScriptEvent
     unsigned long next_us = 0;
     unsigned long next_out_of_sync_display = 0;
     static long out_of_sync;
+
+    static ScriptRegistry registry;
 };
 
 }

@@ -21,7 +21,7 @@ test(ScriptParser, getWord)
 
 test(ScriptParser, getNumber)
 {
-  ScriptParser parser("10 nan 30kHz", 10, false);
+  ScriptParser parser("10 nan 30kHz", 10);
 
   int integer;
   assertEqual(parser.getNumber(integer), true);
@@ -48,7 +48,7 @@ test(ScriptParser, getPinNumber)
 
 test(ScriptParser, getDuration)
 {
-  ScriptParser parser("10us 10ms 3s 1mn 100", 0, false);
+  ScriptParser parser("10us 10ms 3s 1mn 100", 0);
 
   unsigned long d;
   assertEqual(parser.getDuration(d), true); // 10us
@@ -70,7 +70,7 @@ test(ScriptParser, getDuration)
 
 test(ScriptParser, getPeriodUs)
 {
-  ScriptParser parser("1us 1ms 2Hz 1day", 0, false);
+  ScriptParser parser("1us 1ms 2Hz 1day", 0);
 
   assertEqual(parser.getPeriodUs(), 1);
   assertEqual(parser.getPeriodUs(), 1000);
@@ -81,7 +81,7 @@ test(ScriptParser, getPeriodUs)
 
 test(ScriptParser, ratioUs)
 {
-  ScriptParser parser("us ms s user", 0, false);
+  ScriptParser parser("us ms s user", 0);
 
   assertEqual(parser.ratioUs(), 1);
   assertEqual(parser.ratioUs(), 1000);
@@ -91,7 +91,7 @@ test(ScriptParser, ratioUs)
 
 test(ScriptParser, periodUs)
 {
-  ScriptParser parser("Hz kHz Mhz kilo", 0, false);
+  ScriptParser parser("Hz kHz Mhz kilo", 0);
 
   assertEqual(parser.periodUs(), 1000000);
   assertEqual(parser.periodUs(), 1000);
