@@ -32,6 +32,8 @@ class EspClass
           * ((now.tv_sec-start.tv_sec)*1000000+(now.tv_usec-start.tv_usec));
     }
 
+    void restart() { reset(); };
+
   private:
     struct timeval start;
 };
