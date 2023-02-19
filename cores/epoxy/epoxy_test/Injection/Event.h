@@ -19,7 +19,7 @@ class Event
   public:
     Event() = default;
     Event(unsigned long time_us);
-    ~Event();
+    virtual ~Event();
 
     // return value 0 if this is the last event
     virtual unsigned long raise() = 0;
