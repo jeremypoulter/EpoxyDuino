@@ -29,6 +29,10 @@ class SDClass;
 
 namespace fs {
 
+#define FILE_READ       "r"
+#define FILE_WRITE      "w"
+#define FILE_APPEND     "a"
+
 class File;
 class Dir;
 class FS;
@@ -207,8 +211,8 @@ public:
     bool info(FSInfo& info);
     bool info64(FSInfo64& info);
 
-    File open(const char* path, const char* mode);
-    File open(const String& path, const char* mode);
+    File open(const char* path, const char* mode = FILE_READ);
+    File open(const String& path, const char* mode = FILE_READ);
 
     bool exists(const char* path);
     bool exists(const String& path);
