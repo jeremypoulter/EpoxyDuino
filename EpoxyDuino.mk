@@ -1,4 +1,7 @@
+.SILENT:
 # Include this Makefile to compile an Arduino *.ino file on Linux or MacOS.
+
+# vim: ts=4:noexpandtab
 #
 # Create a 'Makefile' in the sketch folder. For example, for the
 # Blink/Blink.ino program, the makefile will be 'Blink/Makefile'.
@@ -128,17 +131,18 @@ EPOXY_MODULES += \
 # specify additional flags to CXXFLAGS and CFLAGS.
 ifeq ($(UNAME), Linux)
 CXX ?= g++
-CXXFLAGS ?= -Wextra -Wall -std=gnu++11 -flto \
+CVER ?=14
+CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -flto \
 	-fno-exceptions -fno-threadsafe-statics
-CFLAGS ?= -Wextra -Wall -std=c11 -flto
+CFLAGS ?= -Wextra -Wall -std=c$(CVER) -flto
 else ifeq ($(UNAME), Darwin)
 CXX ?= clang++
-CXXFLAGS ?= -Wextra -Wall -std=c++11 -stdlib=libc++
-CFLAGS ?= -Wextra -Wall -std=c11
+CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -stdlib=libc++
+CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 else ifeq ($(UNAME), FreeBSD)
 CXX ?= clang++
-CXXFLAGS ?= -Wextra -Wall -std=c++11 -stdlib=libc++
-CFLAGS ?= -Wextra -Wall -std=c11
+CXXFLAGS ?= -Wextra -Wall -std=c++($C) -stdlib=libc++
+CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 endif
 CXXFLAGS += $(EXTRA_CXXFLAGS)
 CFLAGS += $(EXTRA_CFLAGS)
@@ -159,7 +163,7 @@ CPPFLAGS_EXPANSION = -I$(module) -I$(module)/src
 CPPFLAGS += $(foreach module,$(EPOXY_MODULES),$(CPPFLAGS_EXPANSION))
 
 # Linker settings (e.g. -lm).
-LDFLAGS ?=
+LDFLAGS ?= -lpthread
 
 # Collect list of C and C++ srcs to compile.
 #
@@ -207,17 +211,20 @@ OBJS +=$(APP_NAME).o
 
 # Finally the rule to generate the *.out binary file for the application.
 $(APP_NAME).out: $(OBJS)
+	echo "    Linking $(compiler) $<"
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $<
+	echo "    Compiling $(compiler) $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $(abspath $<)
 
 # We don't need this rule because the implicit GNU Make rules for converting
 # *.c and *.cpp into *.o files are sufficient.
 #
-# %.o: %.cpp
-#	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+%.o: %.cpp
+	echo "    Compiling $(compiler) $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(abspath $<) -o $@
 
 # The following simple rules do not capture all header dependencies of a given
 # *.cpp or *.c file. It's probably better to make each *.cpp and *.c to depend
@@ -240,7 +247,11 @@ all: $(APP_NAME).out
 # the quickfix errorformat of vim, so vim will automatically detect assertion
 # errors and jump directly to the line where the assertion failed.
 run:
-	./$(APP_NAME).out
+	echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
+	./$(APP_NAME).out $(TESTS)
+
+debug:
+	gdb --args ./$(APP_NAME).out $(TESTS)
 
 # Use 'make clean' to remove intermediate '*.o' files, the target '*.out' file,
 # and any generated files defined by $(GENERATED).

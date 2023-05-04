@@ -15,7 +15,15 @@
 #include <inttypes.h>
 #include <unistd.h> // usleep()
 #include <time.h> // clock_gettime()
+#include <atomic>
 #include "Arduino.h"
+#include <epoxy_test/Injection/Injection.h>
+
+#include "epoxy_test/ArduinoTest.inc"
+
+std::atomic<unsigned long> epoxy_micros;
+unsigned long epoxy_start_time = 0;
+bool epoxy_real_time = true;
 
 // -----------------------------------------------------------------------
 // Arduino methods emulated in Unix
@@ -67,17 +75,31 @@ int analogRead(uint8_t /*pin*/) { return 0; }
 void analogWrite(uint8_t /*pin*/, int /*val*/) {}
 
 unsigned long millis() {
-  struct timespec spec;
-  clock_gettime(CLOCK_MONOTONIC, &spec);
-  unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
-  return ms;
+  if (epoxy_real_time)
+  {
+    struct timespec spec;
+    clock_gettime(CLOCK_MONOTONIC, &spec);
+    unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
+    return ms - epoxy_start_time / 1000;
+  }
+  else
+  {
+    return epoxy_micros / 1000;
+  }
 }
 
 unsigned long micros() {
-  struct timespec spec;
-  clock_gettime(CLOCK_MONOTONIC, &spec);
-  unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
-  return us;
+  if (epoxy_real_time)
+  {
+    struct timespec spec;
+    clock_gettime(CLOCK_MONOTONIC, &spec);
+    unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
+    return us - epoxy_start_time;
+  }
+  else
+  {
+    return epoxy_micros;
+  }
 }
 
 void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration*/) {}
@@ -85,11 +107,25 @@ void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration
 void noTone(uint8_t /*_pin*/) {}
 
 void delay(unsigned long ms) {
-  usleep(ms * 1000);
+  if (epoxy_real_time)
+  {
+    usleep(ms * 1000);
+  }
+  else
+  {
+    EpoxyInjection::Injector::delay_us(1000 * ms);
+  }
 }
 
 void delayMicroseconds(unsigned int us) {
-  usleep(us);
+  if (epoxy_real_time)
+  {
+    usleep(us);
+  }
+  else
+  {
+    delay(1000*us);
+  }
 }
 
 unsigned long pulseIn(

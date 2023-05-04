@@ -13,6 +13,8 @@
 #ifndef EPOXY_DUINO_EPOXY_ARDUINO_H
 #define EPOXY_DUINO_EPOXY_ARDUINO_H
 
+#include <epoxy_test/ArduinoTest.h>
+
 // xx.yy.zz => xxyyzz (without leading 0)
 #define EPOXY_DUINO_VERSION 10500
 #define EPOXY_DUINO_VERSION_STRING "1.5.0"
@@ -249,6 +251,7 @@ uint8_t digitalWriteValue(uint8_t pin);
 
 unsigned long millis();
 unsigned long micros();
+
 void delay(unsigned long ms);
 void delayMicroseconds(unsigned int us);
 
@@ -329,11 +332,6 @@ uint16_t makeWord(byte h, byte l);
   }
 #endif
 
-#if defined(EPOXY_CORE_ESP8266)
-  #include "pins_arduino_esp8266.h"
-#endif
-#if defined(EPOXY_CORE_AVR)
-  #include "pins_arduino_avr.h"
-#endif
+#include "pins_arduino.h"
 
 #endif
