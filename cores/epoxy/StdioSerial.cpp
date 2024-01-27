@@ -7,8 +7,12 @@
 #include <unistd.h>
 #include "StdioSerial.h"
 
+#ifndef SERIAL_OUTFD
+#define SERIAL_OUTFD STDOUT_FILENO
+#endif
+
 size_t StdioSerial::write(uint8_t c) {
-  ssize_t status = ::write(STDOUT_FILENO, &c, 1);
+  ssize_t status = ::write(SERIAL_OUTFD, &c, 1);
   return (status <= 0) ? 0 : 1;
 }
 
