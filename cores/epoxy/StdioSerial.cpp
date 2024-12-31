@@ -4,11 +4,11 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
+#include <unistd.h> // STDIN_FILENO
 #include "StdioSerial.h"
 
 size_t StdioSerial::write(uint8_t c) {
-  ssize_t status = ::write(STDOUT_FILENO, &c, 1);
+  ssize_t status = ::write(outputFd, &c, 1);
   return (status <= 0) ? 0 : 1;
 }
 

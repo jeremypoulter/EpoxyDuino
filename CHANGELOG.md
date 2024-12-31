@@ -1,6 +1,8 @@
 # Changelog
 
 * Unreleased
+    * Support sending output of `Serial` port to `STDERR`
+      (replaces [PR#92](https://github.com/bxparks/EpoxyDuino/pull/92).
 * 1.6.0 (2024-07-25)
     * Add `strncat_P()` to `pgmspace.h`.
     * Add `ESP.restart()` and `ESP.getChipId()`. See

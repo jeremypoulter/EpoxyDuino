@@ -106,6 +106,8 @@ The disadvantages are:
     * [Serial Port Emulation](#SerialPortEmulation)
         * [Unix Line Mode](#UnixLineMode)
         * [Enable Terminal Echo](#EnableTerminalEcho)
+        * [Output to STDERR](#OutputToStderr)
+        * [Multiple Serial Ports](#MultipleSerialPorts)
 * [Libraries and Mocks](#LibrariesAndMocks)
     * [Inherently Compatible Libraries](#InherentlyCompatibleLibraries)
     * [Emulation Libraries](#EmulationLibraries)
@@ -1062,7 +1064,7 @@ test(myTest) {
 ```
 
 <a name="EnableTerminalEcho"></a>
-#### Enable Terminal Echno
+#### Enable Terminal Echo
 
 By default, the `stdin` of the terminal is set to `NOECHO` mode for consistency
 with the actual serial port of an Arduino microcontroller. However when running
@@ -1082,6 +1084,45 @@ void setup() {
 
   ...
 }
+```
+
+<a name="OutputToStderr"></a>
+#### Output to STDERR
+
+By default, the `Serial` instance sends its output to the STDOUT (file
+descriptor `STDOUT_FILENO`, i.e. 1). We can override that to send the output to
+STDERR (file descriptor `STDERR_FILENO`) using the
+`StdioSerial::setOutputFileDescriptor(int fd)` method:
+
+```C++
+Serial.println("This goes to STDOUT");
+Serial.setOutputFileDescriptor(STDERR_FILENO);
+Serial.println("This goes to STDERR");
+```
+
+<a name="MultipleSerialPorts"></a>
+#### Multiple Serial Ports
+
+By default, a default instance of `StdioSerial` class is created named `Serial`,
+which matches the behavior of the Arduino programming framework on actual
+microcontrollers which a single serial port is provided by default.
+
+Some microcontrollers provide multiple serial ports, often called `Serial1` or
+`Serial2`. We can emulate that in EpoxyDuino by creating additional instances of
+`StdioSerial`. The following creates a `Serial1` instances bound to STDOUT, and
+another `Serial2` bound to STDERR:
+
+```C++
+#ifdef EPOXY_DUINO
+StdioSerial Serial1(STDOUT_FILENO);
+StdioSerial Serial2(STDERR_FILENO);
+...
+void someFunction() {
+    Serial1.println("Print to STDOUT");
+    Serial2.println("Print to STDERR");
+    ...
+}
+#endif
 ```
 
 <a name="LibrariesAndMocks"></a>

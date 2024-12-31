@@ -6,6 +6,7 @@
 #ifndef EPOXY_DUINO_STDIO_SERIAL_H
 #define EPOXY_DUINO_STDIO_SERIAL_H
 
+#include <unistd.h> // STDOUT_FILENO
 #include "Print.h"
 #include "Stream.h"
 
@@ -15,6 +16,20 @@
  */
 class StdioSerial: public Stream {
   public:
+    /**
+     * Construct an instance. The default output file descriptor is
+     * STDOUT_FILENO, but STDERR_FILENO is another option. POSIX.1-2017 defines
+     * these values in <unistd.h> (see
+     * https://unix.stackexchange.com/questions/437602).
+     */
+    StdioSerial(int fd = STDOUT_FILENO) : outputFd(fd) { }
+
+    /**
+     * Override the output file descriptor. Two common values are expected to be
+     * STDOUT_FILENO and STDERR_FILENO.
+     */
+    void setOutputFileDescriptor(int fd) { outputFd = fd; }
+
     void begin(unsigned long /*baud*/) { bufch = -1; }
 
     size_t write(uint8_t c) override;
@@ -37,6 +52,7 @@ class StdioSerial: public Stream {
     int peek() override;
 
   private:
+    int outputFd;
     int bufch;
 };
 
