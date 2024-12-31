@@ -96,6 +96,7 @@ The disadvantages are:
     * [Alternate Arduino Core](#AlternateArduinoCore)
     * [PlatformIO](#PlatformIO)
     * [Command Line Flags and Arguments](#CommandLineFlagsAndArguments)
+    * [Termination](#Termination)
     * [Debugging](#Debugging)
         * [Valgrind](#Valgrind)
     * [Mock digitalRead() digitalWrite()](#MockDigitalReadDigitalWrite)
@@ -727,6 +728,25 @@ Usage: ./CommandLine.out [--help|-h] [-s] [--include word] [--] [words ...]
 
 A more advanced example can be seen in
 [AUnit/TestRunner.cpp](https://github.com/bxparks/AUnit/blob/develop/src/aunit/TestRunner.cpp).
+
+<a name="Termination"></a>
+### Termination
+
+A program running on a microcontroller will never terminate. But the EpoxyDuino
+version of that program running on the desktop may wish to do so. The
+recommended way to terminate is the following:
+
+```C++
+#ifdef EPOXY_DUINO
+exit(0);
+#endif
+```
+
+The exit handlers in EpoxyDuino will try to clean up the various terminal
+configurations into a sane state.
+
+You should always be able to force the termination an EpoxyDuino program by
+hitting **Ctrl-C**.
 
 <a name="Debugging"></a>
 ### Debugging
