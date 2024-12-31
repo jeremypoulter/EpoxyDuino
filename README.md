@@ -1103,26 +1103,26 @@ Serial.println("This goes to STDERR");
 <a name="MultipleSerialPorts"></a>
 #### Multiple Serial Ports
 
-By default, a default instance of `StdioSerial` class is created named `Serial`,
-which matches the behavior of the Arduino programming framework on actual
-microcontrollers which a single serial port is provided by default.
+By default, a default instance of `StdioSerial` class is created and named
+`Serial`, which matches the behavior of the Arduino programming framework on
+actual microcontrollers where a single serial port is provided by default.
 
 Some microcontrollers provide multiple serial ports, often called `Serial1` or
 `Serial2`. We can emulate that in EpoxyDuino by creating additional instances of
-`StdioSerial`. The following creates a `Serial1` instances bound to STDOUT, and
-another `Serial2` bound to STDERR:
+`StdioSerial`. The following creates a `Serial1` instance bound to STDOUT, and
+another `Serial2` instance bound to STDERR:
 
 ```C++
 #ifdef EPOXY_DUINO
 StdioSerial Serial1(STDOUT_FILENO);
 StdioSerial Serial2(STDERR_FILENO);
+#endif
 ...
 void someFunction() {
     Serial1.println("Print to STDOUT");
     Serial2.println("Print to STDERR");
     ...
 }
-#endif
 ```
 
 <a name="LibrariesAndMocks"></a>
