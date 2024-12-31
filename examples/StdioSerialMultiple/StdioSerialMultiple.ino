@@ -36,6 +36,10 @@ void setup(void) {
 
   Serial1.println(F("Printing to STDOUT"));
   Serial2.println(F("Printing to STDERR"));
+
+#if defined(EPOXY_DUINO)
+  exit(0);
+#endif
 }
 
 void loop(void) {}
