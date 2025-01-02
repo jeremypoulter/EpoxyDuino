@@ -1165,7 +1165,7 @@ See [examples/StdioSerialMultiple](examples/StdioSerialMultiple) for details.
 <a name="ShellRedirection"></a>
 #### Shell Redirection
 
-This probably a good place to remind Unix users that shell redirection is
+This is probably a good place to remind Unix users that shell redirection is
 available on specific file descriptors using the `N>` syntax. Suppose we change
 the above example to use 3 and 4 instead, like this:
 
