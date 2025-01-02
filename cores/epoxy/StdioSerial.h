@@ -10,6 +10,14 @@
 #include "Print.h"
 #include "Stream.h"
 
+#ifndef SERIAL_OUTPUT_FILENO
+// Default output file number used by `StdioSerial` class, and therefore, the
+// `Serial` instance. Normally this is `STDOUT_FILENO` but can be overridden on
+// the command line. For example, recompiling with `-D SERIAL_OUTPUT_FILENO=2`
+// will configure `Serial` to print to `STDERR` instead.
+#define SERIAL_OUTPUT_FILENO STDOUT_FILENO
+#endif
+
 /**
  * A version of Serial that reads from STDIN and sends output to STDOUT on
  * Linux or MacOS.
@@ -20,9 +28,13 @@ class StdioSerial: public Stream {
      * Construct an instance. The default output file descriptor is
      * STDOUT_FILENO, but STDERR_FILENO is another option. POSIX.1-2017 defines
      * these values in <unistd.h> (see
-     * https://unix.stackexchange.com/questions/437602).
+     * https://unix.stackexchange.com/questions/437602), so works under Linux
+     * and MacOS (and assumed to work under FreeBSD, but not explicitly tested).
+     *
+     * The default file descriptor can be overridden by defining the
+     * `SERIAL_OUTPUT_FILENO={n}` macro on the command line when compiling.
      */
-    StdioSerial(int fd = STDOUT_FILENO) : outputFd(fd) { }
+    StdioSerial(int fd = SERIAL_OUTPUT_FILENO) : outputFd(fd) { }
 
     /**
      * Override the output file descriptor. Two common values are expected to be

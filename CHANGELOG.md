@@ -3,6 +3,9 @@
 * Unreleased
     * Support sending output of `Serial` port to `STDERR`
       (replaces [PR#92](https://github.com/bxparks/EpoxyDuino/pull/92).
+    * Add `SERIAL_OUTPUT_FILENO` macro which can be overridden on the command
+      line (e.g. `make EXTRA_CPPFLAGS='SERIAL_OUTPUT_FILENO=2'` to override the
+      default output file descriptor of `Serial` at compile time.
 * 1.6.0 (2024-07-25)
     * Add `strncat_P()` to `pgmspace.h`.
     * Add `ESP.restart()` and `ESP.getChipId()`. See

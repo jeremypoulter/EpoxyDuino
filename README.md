@@ -109,6 +109,7 @@ The disadvantages are:
         * [Enable Terminal Echo](#EnableTerminalEcho)
         * [Output to STDERR](#OutputToStderr)
         * [Multiple Serial Ports](#MultipleSerialPorts)
+        * [Shell Redirection](#ShellRedirection)
 * [Libraries and Mocks](#LibrariesAndMocks)
     * [Inherently Compatible Libraries](#InherentlyCompatibleLibraries)
     * [Emulation Libraries](#EmulationLibraries)
@@ -1110,14 +1111,28 @@ void setup() {
 #### Output to STDERR
 
 By default, the `Serial` instance sends its output to the STDOUT (file
-descriptor `STDOUT_FILENO`, i.e. 1). We can override that to send the output to
-STDERR (file descriptor `STDERR_FILENO`) using the
+descriptor `STDOUT_FILENO` which is always 1). We can override that to send the
+output to STDERR (file descriptor `STDERR_FILENO`) using the
 `StdioSerial::setOutputFileDescriptor(int fd)` method:
 
 ```C++
 Serial.println("This goes to STDOUT");
 Serial.setOutputFileDescriptor(STDERR_FILENO);
 Serial.println("This goes to STDERR");
+```
+
+Another way to override the output file descriptor of the `Serial` instance is
+to override the `SERIAL_OUTPUT_FILENO` macro on the command line during
+compiling. The compiler `c++` or `g++` allows the `-D` flag like this:
+
+```
+$ c++ -D SERIAL_OUTPUT_FILENO=2 file.cpp ...
+```
+
+When using `make`, the flag can be passed into the compiler like this:
+
+```
+$ make EXTRA_CPPFLAGS='-D SERIAL_OUTPUT_FILENO=2'
 ```
 
 <a name="MultipleSerialPorts"></a>
@@ -1144,6 +1159,39 @@ void someFunction() {
     ...
 }
 ```
+
+See [examples/StdioSerialMultiple](examples/StdioSerialMultiple) for details.
+
+<a name="ShellRedirection"></a>
+#### Shell Redirection
+
+This probably a good place to remind Unix users that shell redirection is
+available on specific file descriptors using the `N>` syntax. Suppose we change
+the above example to use 3 and 4 instead, like this:
+
+```C++
+#ifdef EPOXY_DUINO
+StdioSerial Serial1(3);
+StdioSerial Serial2(4);
+#endif
+...
+void someFunction() {
+    Serial1.println("Print to 3");
+    Serial2.println("Print to 4");
+    ...
+}
+```
+
+We can run the executable in the `bash(1)` shell like this:
+
+```
+$ ./StdioSerialMultiple.out 3> stream3.txt 4> stream4.txt
+```
+
+We then get 2 files:
+
+- `stream3.txt` contains the string "Print to 3", and
+- `stream4.txt` contains the string "Print to 4".
 
 <a name="LibrariesAndMocks"></a>
 ## Libraries and Mocks
