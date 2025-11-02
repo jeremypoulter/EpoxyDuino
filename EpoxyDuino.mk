@@ -210,20 +210,22 @@ OBJS += $(APP_SRCS_C:%.c=%.o)
 OBJS +=$(APP_NAME).o
 
 # Finally the rule to generate the *.out binary file for the application.
-$(APP_NAME).out: $(OBJS)
-	echo "    Linking $(compiler) $<"
+$(RUN)$(APP_NAME).out: $(OBJS)
+	echo "    Linking $(compiler) $@"
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # We need to add a rule to treat .ino file as just a  normal .cpp.
 $(APP_NAME).o: $(APP_NAME).ino $(DEPS)
-	echo "    Compiling $(compiler) $<"
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $(abspath $<)
+	echo "    Compiling 1 $(compiler) $<"
+	cmd="$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $(abspath $<)"; \
+	$$cmd || (echo "$$cmd"; false)
 
-# We don't need this rule because the implicit GNU Make rules for converting
-# *.c and *.cpp into *.o files are sufficient.
-#
+%.o: %.ino
+	echo "    Compiling 2 $(compiler) $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++ -c $(abspath $<) -o $@
+
 %.o: %.cpp
-	echo "    Compiling $(compiler) $<"
+	echo "    Compiling 3 $(compiler) $<"
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(abspath $<) -o $@
 
 # The following simple rules do not capture all header dependencies of a given
@@ -246,7 +248,7 @@ all: $(APP_NAME).out
 # the vim editor. The error message of AUnit (as of v1.7) is compatible with
 # the quickfix errorformat of vim, so vim will automatically detect assertion
 # errors and jump directly to the line where the assertion failed.
-run:
+$(RUN)run:
 	echo "------------[ running ./$(APP_NAME).out $(TESTS) ]---------------"
 	./$(APP_NAME).out $(TESTS)
 

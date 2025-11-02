@@ -5,7 +5,7 @@ folder?=
 compiler?=gcc
 jobs?=4
 clearn?=0
-MAKEOPTS=--no-print-directory compiler=$(compiler)
+# MAKEOPTS=--no-print-directory compiler=$(compiler)
 ifeq (clean, 1)
   RECIPES=clean all
 else
