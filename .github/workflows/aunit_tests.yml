@@ -23,7 +23,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Setup
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libc++-dev
+
+    - name: Setup Arduino libraries
       run: |
         cd ..
         git clone https://github.com/hsaturn/AUnit
