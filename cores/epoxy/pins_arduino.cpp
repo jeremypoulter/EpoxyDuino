@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "pins_arduino.h"
 
 namespace EpoxyTest

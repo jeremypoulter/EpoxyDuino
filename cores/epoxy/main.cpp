@@ -141,14 +141,14 @@ void enableTerminalEcho() {
   }
 }
 
+}
+
 // Weak reference so that the calling code can provide its own main().
 int main(int argc, char** argv)
 __attribute__((weak));
 
 int main(int argc, char** argv) {
   return epoxyduino_main(argc, argv);
-}
-
 }
 
 #endif // #ifdef EPOXY_DUINO

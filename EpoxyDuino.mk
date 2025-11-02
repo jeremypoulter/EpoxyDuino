@@ -141,7 +141,7 @@ CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -stdlib=libc++
 CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 else ifeq ($(UNAME), FreeBSD)
 CXX ?= clang++
-CXXFLAGS ?= -Wextra -Wall -std=c++($C) -stdlib=libc++
+CXXFLAGS ?= -Wextra -Wall -std=c++$(CVER) -stdlib=libc++
 CFLAGS ?= -Wextra -Wall -std=c$(CVER)
 endif
 CXXFLAGS += $(EXTRA_CXXFLAGS)

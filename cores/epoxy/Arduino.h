@@ -272,9 +272,6 @@ void setup();
 /** Provided in the client code's *.ino file. */
 void loop();
 
-/** Calls epoxyduino_main() unless overriden by user */
-int main(int argc, char** argv);
-
 /** Copy of the argc parameter of main() as a global variable. */
 extern int epoxy_argc;
 
@@ -283,15 +280,17 @@ extern const char* const* epoxy_argv;
 
 /**
  * Enable echoing of each character. By default echoing is turned off for
- * consistency with the behavior of the serial port of a real Arduino
- * microcontroller. However when running on a Unix machine inside a terminal
- * emulator, it is often more useful to enable echoing so that the user can see
- * the characters being typed. This function should be called in the setup(),
+ * compatibility with EpoxyDuino, but can be enabled to help debugging
+ * issues. Only valid on Unix systems where EpoxyDuino runs. No-op on Arduino
+ * systems. Use this function only in code with logic that is specifically
  * guarded by a `#if defined(EPOXY_DUINO)`.
  */
 void enableTerminalEcho();
 
 }
+
+/** Calls epoxyduino_main() unless overriden by user */
+int main(int argc, char** argv);
 
 void tone(uint8_t _pin, unsigned int frequency, unsigned long duration = 0);
 void noTone(uint8_t _pin);
