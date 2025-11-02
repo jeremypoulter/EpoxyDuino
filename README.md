@@ -145,7 +145,7 @@ The disadvantages are:
   environments (e.g. 16-bit `int` versus 32-bit `int`, or 32-bit `long` versus
   64-bit `long`).
 
-**Version**: 1.5.0 (2022-12-08)
+**Version**: 1.6.0 (2024-07-25)
 
 **Changelog**: See [CHANGELOG.md](CHANGELOG.md)
 
@@ -170,6 +170,7 @@ The disadvantages are:
     * [Alternate Arduino Core](#AlternateArduinoCore)
     * [PlatformIO](#PlatformIO)
     * [Command Line Flags and Arguments](#CommandLineFlagsAndArguments)
+    * [Termination](#Termination)
     * [Debugging](#Debugging)
         * [Valgrind](#Valgrind)
     * [Mock digitalRead() digitalWrite()](#MockDigitalReadDigitalWrite)
@@ -180,6 +181,9 @@ The disadvantages are:
     * [Serial Port Emulation](#SerialPortEmulation)
         * [Unix Line Mode](#UnixLineMode)
         * [Enable Terminal Echo](#EnableTerminalEcho)
+        * [Output to STDERR](#OutputToStderr)
+        * [Multiple Serial Ports](#MultipleSerialPorts)
+        * [Shell Redirection](#ShellRedirection)
 * [Libraries and Mocks](#LibrariesAndMocks)
     * [Inherently Compatible Libraries](#InherentlyCompatibleLibraries)
     * [Emulation Libraries](#EmulationLibraries)
@@ -800,6 +804,25 @@ Usage: ./CommandLine.out [--help|-h] [-s] [--include word] [--] [words ...]
 A more advanced example can be seen in
 [AUnit/TestRunner.cpp](https://github.com/bxparks/AUnit/blob/develop/src/aunit/TestRunner.cpp).
 
+<a name="Termination"></a>
+### Termination
+
+A program running on a microcontroller will never terminate. But the EpoxyDuino
+version of that program running on the desktop may wish to do so. The
+recommended way to terminate is the following:
+
+```C++
+#ifdef EPOXY_DUINO
+exit(0);
+#endif
+```
+
+The exit handlers in EpoxyDuino will try to clean up the various terminal
+configurations into a sane state.
+
+You should always be able to force the termination an EpoxyDuino program by
+hitting **Ctrl-C**.
+
 <a name="Debugging"></a>
 ### Debugging
 
@@ -1136,7 +1159,7 @@ test(myTest) {
 ```
 
 <a name="EnableTerminalEcho"></a>
-#### Enable Terminal Echno
+#### Enable Terminal Echo
 
 By default, the `stdin` of the terminal is set to `NOECHO` mode for consistency
 with the actual serial port of an Arduino microcontroller. However when running
@@ -1157,6 +1180,92 @@ void setup() {
   ...
 }
 ```
+
+<a name="OutputToStderr"></a>
+#### Output to STDERR
+
+By default, the `Serial` instance sends its output to the STDOUT (file
+descriptor `STDOUT_FILENO` which is always 1). We can override that to send the
+output to STDERR (file descriptor `STDERR_FILENO`) using the
+`StdioSerial::setOutputFileDescriptor(int fd)` method:
+
+```C++
+Serial.println("This goes to STDOUT");
+Serial.setOutputFileDescriptor(STDERR_FILENO);
+Serial.println("This goes to STDERR");
+```
+
+Another way to override the output file descriptor of the `Serial` instance is
+to override the `SERIAL_OUTPUT_FILENO` macro on the command line during
+compiling. The compiler `c++` or `g++` allows the `-D` flag like this:
+
+```
+$ c++ -D SERIAL_OUTPUT_FILENO=2 file.cpp ...
+```
+
+When using `make`, the flag can be passed into the compiler like this:
+
+```
+$ make EXTRA_CPPFLAGS='-D SERIAL_OUTPUT_FILENO=2'
+```
+
+<a name="MultipleSerialPorts"></a>
+#### Multiple Serial Ports
+
+By default, a default instance of `StdioSerial` class is created and named
+`Serial`, which matches the behavior of the Arduino programming framework on
+actual microcontrollers where a single serial port is provided by default.
+
+Some microcontrollers provide multiple serial ports, often called `Serial1` or
+`Serial2`. We can emulate that in EpoxyDuino by creating additional instances of
+`StdioSerial`. The following creates a `Serial1` instance bound to STDOUT, and
+another `Serial2` instance bound to STDERR:
+
+```C++
+#ifdef EPOXY_DUINO
+StdioSerial Serial1(STDOUT_FILENO);
+StdioSerial Serial2(STDERR_FILENO);
+#endif
+...
+void someFunction() {
+    Serial1.println("Print to STDOUT");
+    Serial2.println("Print to STDERR");
+    ...
+}
+```
+
+See [examples/StdioSerialMultiple](examples/StdioSerialMultiple) for details.
+
+<a name="ShellRedirection"></a>
+#### Shell Redirection
+
+This is probably a good place to remind Unix users that shell redirection is
+available on specific file descriptors using the `N>` syntax. Suppose we change
+the above example to use 3 and 4 instead, like this:
+
+```C++
+#ifdef EPOXY_DUINO
+StdioSerial Serial1(3);
+StdioSerial Serial2(4);
+#endif
+...
+void someFunction() {
+    Serial1.println("Print to 3");
+    Serial2.println("Print to 4");
+    ...
+}
+```
+
+We can run the executable in the `bash(1)` shell like this:
+
+```
+$ ./StdioSerialMultiple.out 3> stream3.txt 4> stream4.txt
+```
+
+We then get 2 files:
+
+- `stream3.txt` contains the string "Print to 3", and
+- `stream4.txt` contains the string "Print to 4".
 
 <a name="LibrariesAndMocks"></a>
 ## Libraries and Mocks
@@ -1385,6 +1494,16 @@ EpoxyDuino release because I no longer use these older environments.
     * I am not sure that I have migrated all the relevant and important compiler
       flags from the microcontroller environment (AVR, ESP8266, etc.) to
       the EpoxyDuino environment.
+* The `sizeof(int)` is `4` on EpoxyDuino as defined by C++ compilers on
+  Unix environments.
+    * This may cause problems with non-portable Arduino code that assumes that
+      `sizeof(int) == 2` which is true only on 8-bit AVR processors used by
+      older Arduino boards. All other Arduino-compatible microcontrollers (e.g.
+      ESP8266, ESP32, SAMD21, SAMD51) use 32-bit processors whose C++ compilers
+      define `sizeof(int) == 4`.
+    * Non-portable code can be converted into portable code by changing the
+      `short`, `int`, and `long` types into types with explicit sizes such as
+      `int16_t`, `uint16_t`, `int32_t`, `uint32_t`, and so on.
 
 <a name="FeedbackAndSupport"></a>
 ## Feedback and Support
@@ -1429,3 +1548,5 @@ people ask similar questions later.
   [PR#68](https://github.com/bxparks/EpoxyDuino/pull/68).
 * Add `memcmp_P()` by @dawidchyrzynski in
   [PR#71](https://github.com/bxparks/EpoxyDuino/pull/71).
+* Add additional ESP functions by @EricLauber in
+  [PR#71](https://github.com/bxparks/EpoxyDuino/pull/84).

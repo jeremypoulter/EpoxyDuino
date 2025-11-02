@@ -1,6 +1,18 @@
 # Changelog
 
 * Unreleased
+    * Support sending output of `Serial` port to `STDERR`
+      (replaces [PR#92](https://github.com/bxparks/EpoxyDuino/pull/92).
+    * Add `SERIAL_OUTPUT_FILENO` macro which can be overridden on the command
+      line (e.g. `make EXTRA_CPPFLAGS='SERIAL_OUTPUT_FILENO=2'` to override the
+      default output file descriptor of `Serial` at compile time.
+* 1.6.0 (2024-07-25)
+    * Add `strncat_P()` to `pgmspace.h`.
+    * Add `ESP.restart()` and `ESP.getChipId()`. See
+      [PR#84](https://github.com/bxparks/EpoxyDuino/pull/84).
+    * Support files located in the `utility` subdirectory for libraries using
+      the old v1.0 format. Fixes
+      [Issue#89](https://github.com/bxparks/EpoxyDuino/issues/89).
 * 1.5.0 (2022-12-08)
     * Support compiling plain `*.c` files in libraries and in the application.
         * The C files are assumed to be written in C11.
