@@ -115,7 +115,7 @@ void Injector::loop()
         if (us >= it->first)
         {
           Events to_insert;
-          while(events.size() and it->first == next)
+          while(events.size() and it != events.end() and it->first == next)
           {
             if (it->second)
             {
