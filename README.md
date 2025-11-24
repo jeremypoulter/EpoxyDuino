@@ -176,6 +176,7 @@ The disadvantages are:
     * [Mock digitalRead() digitalWrite()](#MockDigitalReadDigitalWrite)
         * [digitalReadValue()](#DigitalReadValue)
         * [digitalWriteValue()](#DigitalWriteValue)
+        * [Interrupt Testing Functions](#InterruptTesting)
 * [Supported Arduino Features](#SupportedArduinoFeatures)
     * [Arduino Functions](#ArduinoFunctions)
     * [Serial Port Emulation](#SerialPortEmulation)
@@ -955,6 +956,53 @@ not a standard Arduino function. It is defined only in EpoxyDuino.
 The `pin` parameter should satisfy `0 <= pin < 32`. If `pin >= 32`, then
 `digitalWriteValue()` always return 0.
 
+<a name="InterruptTesting"></a>
+#### Interrupt Testing Functions
+
+EpoxyDuino provides a functional implementation of Arduino's interrupt system
+with additional testing functions to facilitate interrupt-driven code testing:
+
+* **Standard Arduino Functions**:
+    * `attachInterrupt(interruptNum, handler, mode)` - Attach interrupt handler
+    * `detachInterrupt(interruptNum)` - Remove interrupt handler  
+    * `attachInterruptArg(pin, handler, arg, mode)` - Attach with argument (ESP8266)
+
+* **Testing Functions** (EpoxyDuino-specific):
+    * `checkInterrupts()` - Check all pins and trigger appropriate handlers
+    * `triggerInterrupt(interruptNum)` - Manually trigger an interrupt
+    * `digitalReadValue(pin, value)` - Set value for `digitalRead()` to simulate pin changes
+
+Interrupt modes supported: `RISING`, `FALLING`, `CHANGE`, `ONLOW`, `ONHIGH`, `ONLOW_WE`, `ONHIGH_WE`
+
+**Example usage**:
+```C++
+#include <Arduino.h>
+
+volatile int count = 0;
+
+void myInterruptHandler() {
+  count++;
+}
+
+void setup() {
+  attachInterrupt(2, myInterruptHandler, RISING);
+}
+
+void loop() {
+  // Simulate pin going HIGH
+  digitalReadValue(2, HIGH);
+  checkInterrupts();  // Will trigger myInterruptHandler()
+  
+  // Or directly trigger without pin state change
+  triggerInterrupt(2);
+}
+```
+
+See [examples/Interrupt](examples/Interrupt) for a complete example.
+
+**Note**: Interrupts in EpoxyDuino are not asynchronous. You must explicitly
+call `checkInterrupts()` to process pin state changes and trigger handlers.
+
 <a name="SupportedArduinoFeatures"></a>
 ## Supported Arduino Features
 
@@ -1000,6 +1048,7 @@ which are implemented:
     * `digitalWrite()`, `digitalRead()`, `pinMode()` (empty stubs)
     * `analogRead()`, `analogWrite()` (empty stubs)
     * `pulseIn()`, `pulseInLong()`, `shiftIn()`, `shiftOut()` (empty stubs)
+    * `attachInterrupt()`, `detachInterrupt()`, `attachInterruptArg()` (functional implementation)
     * `min()`, `max()`, `abs()`, `round()`, etc
     * `bit()`, `bitRead()`, `bitSet()`, `bitClear()`, `bitWrite()`
     * `random()`, `randomSeed()`, `map()`

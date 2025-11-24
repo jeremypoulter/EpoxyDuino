@@ -266,6 +266,24 @@ void detachInterrupt(uint8_t interruptNum);
   void attachInterruptArg(uint8_t pin, void (*)(void*), void* arg, int mode);
 #endif
 
+/**
+ * Check if any interrupts should be triggered based on pin state changes.
+ * This function should be called periodically (e.g., from yield() or in the
+ * main loop) to check for pin state changes and trigger interrupt handlers.
+ * 
+ * This is an EpoxyDuino-specific function for testing interrupt-driven code.
+ */
+void checkInterrupts();
+
+/**
+ * Manually trigger an interrupt for testing purposes. This simulates an
+ * interrupt occurring on the specified pin.
+ * 
+ * This is an EpoxyDuino-specific function for testing interrupt-driven code.
+ */
+void triggerInterrupt(uint8_t interruptNum);
+
+
 /** Provided in the client code's *.ino file. */
 void setup();
 
