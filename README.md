@@ -110,6 +110,8 @@ also provided:
   FastLED (https://github.com/FastLED/FastLED) library
 * [EpoxyMockSTM32RTC](libraries/EpoxyMockSTM32RTC/): mock version of the
   STM32RTC (https://github.com/stm32duino/STM32RTC) library
+* [EpoxyMockWiFi](libraries/EpoxyMockWiFi/): mock version of WiFi libraries
+  for ESP8266, ESP32, and other Arduino-compatible platforms
 
 These mock libraries may be sufficient for a CI pipeline.
 
@@ -1428,6 +1430,9 @@ intended. This limitation may be sufficient for Continuous Integration purposes.
 * [EpoxyMockSTM32RTC](libraries/EpoxyMockSTM32RTC/)
     * Mock version of the STM32RTC (https://github.com/stm32duino/STM32RTC)
       library.
+* [EpoxyMockWiFi](libraries/EpoxyMockWiFi/)
+    * Mock version of WiFi libraries for ESP8266, ESP32, and other Arduino-compatible
+      platforms. Provides a unified WiFi API for compilation testing.
 * EspMock (https://github.com/hsaturn/EspMock)
     * This is a separate project that provides various mocks for functions and
       libraries included with the ESP8266 and the ESP32 processors.
