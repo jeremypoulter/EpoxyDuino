@@ -206,19 +206,31 @@ size_t Print::println(const Printable& x)
   return n;
 }
 
-size_t Print::printf(const char* fmt, ...) {
+size_t Print::vprintf_common(const char* fmt, va_list args) {
   char buf[PRINTF_BUFFER_SIZE];
-  va_list args;
-  va_start(args, fmt);
   int status = vsnprintf(buf, PRINTF_BUFFER_SIZE, fmt, args);
-  va_end(args);
   if (status >= 0) {
     buf[PRINTF_BUFFER_SIZE - 1] = '\0';
-    size_t n = print(buf);
-    return n;
-  } else {
-    return 0;
+    return print(buf);
   }
+  return 0;
+}
+
+size_t Print::printf(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  size_t n = vprintf_common(fmt, args);
+  va_end(args);
+  return n;
+}
+
+size_t Print::printf_P(PGM_P fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  // In EpoxyDuino, PGM_P is just const char*, so this is identical to printf()
+  size_t n = vprintf_common(fmt, args);
+  va_end(args);
+  return n;
 }
 
 // Private Methods /////////////////////////////////////////////////////////////

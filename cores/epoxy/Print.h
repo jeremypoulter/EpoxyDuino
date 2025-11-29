@@ -44,6 +44,7 @@ class Print
 
     size_t printNumber(unsigned long, uint8_t);
     size_t printFloat(double, uint8_t);
+    size_t vprintf_common(const char* format, va_list args);
 
   protected:
     void setWriteError(int err = 1) { write_error = err; }
@@ -111,6 +112,10 @@ class Print
     // printf() extension supported by many microcontrollers including
     // Teensy, ESP8266 and ESP32 (but not AVR).
     size_t printf(const char* format, ...);
+
+    // printf_P() for printing formatted strings from program memory (PROGMEM)
+    // In EpoxyDuino, PROGMEM is a no-op, so this behaves identically to printf()
+    size_t printf_P(PGM_P format, ...);
 
     virtual void flush() { /* Empty implementation for backward compatibility */ }
 };
