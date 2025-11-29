@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <string.h> // strlen()
 #include <stddef.h> // size_t
+#include <cstdarg>
 
 #include "WString.h"
 #include "Printable.h"
