@@ -32,7 +32,7 @@
 #include "WCharacter.h"
 #include "Print.h"
 #include "StdioSerial.h"
-#if defined(EPOXY_CORE_ESP8266)
+#if defined(EPOXY_CORE_ESP8266) || defined(EPOXY_CORE_ESP32)
   #include "Esp.h"
 #endif
 
@@ -60,6 +60,15 @@
   #define FUNCTION_2        0x28
   #define FUNCTION_3        0x38
   #define FUNCTION_4        0x48
+#endif
+#if defined(EPOXY_CORE_ESP32)
+  // Match Arduino-ESP32 semantics loosely. Values are not important for
+  // EpoxyDuino stubs, but many libraries require these symbols.
+  #define INPUT         0x01
+  #define OUTPUT        0x03
+  #define INPUT_PULLUP  0x05
+  #define INPUT_PULLDOWN 0x09
+  #define OUTPUT_OPEN_DRAIN 0x13
 #endif
 
 // Various math constants.
@@ -90,6 +99,13 @@
   #define ONHIGH    0x05
   #define ONLOW_WE  0x0C
   #define ONHIGH_WE 0x0D
+#endif
+#if defined(EPOXY_CORE_ESP32)
+  #define RISING    0x01
+  #define FALLING   0x02
+  #define CHANGE    0x03
+  #define ONLOW     0x04
+  #define ONHIGH    0x05
 #endif
 
 #define DEFAULT 1
@@ -325,7 +341,7 @@ uint16_t makeWord(byte h, byte l);
   long secureRandom(long, long);
 #endif
 
-#if defined(EPOXY_CORE_ESP8266)
+#if defined(EPOXY_CORE_ESP8266) || defined(EPOXY_CORE_ESP32)
   inline void setTZ(const char* /*tz*/) {}
 
   inline void configTime(

@@ -46,6 +46,7 @@
 #       * The C macro to select a specific core. Valid options are:
 #			* EPOXY_CORE_AVR (default)
 #           * EPOXY_CORE_ESP8266
+#           * EPOXY_CORE_ESP32
 #	* EPOXY_CORE_PATH
 #       * Select the alternate Core given by this full path.
 #       * Default: $(EPOXY_DUINO_DIR)/cores/epoxy
@@ -72,7 +73,7 @@ EPOXY_DUINO_PARENT_DIR := $(abspath $(EPOXY_DUINO_DIR)/..)
 ARDUINO_LIB_DIRS ?=
 
 # CPP macro to select a specific core. Valid options are:
-# EPOXY_CORE_AVR (default), and EPOXY_CORE_ESP8266.
+# EPOXY_CORE_AVR (default), EPOXY_CORE_ESP8266, and EPOXY_CORE_ESP32.
 EPOXY_CORE ?= EPOXY_CORE_AVR
 
 # Define the directory where the <Arduino.h> and other core API files are

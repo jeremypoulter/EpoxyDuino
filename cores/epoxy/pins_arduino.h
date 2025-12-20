@@ -6,6 +6,9 @@
 #if defined(EPOXY_CORE_ESP8266)
   #include "pins_arduino_esp8266.h"
 #endif
+#if defined(EPOXY_CORE_ESP32)
+  #include "pins_arduino_esp32.h"
+#endif
 #if defined(EPOXY_CORE_AVR)
   #include "pins_arduino_avr.h"
 #endif

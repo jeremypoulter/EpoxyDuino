@@ -704,12 +704,14 @@ through 2 Makefile variables:
 The `EPOXY_CORE` Makefile variable defines the C-preprocessor macro which will
 be defined through the `-D` flag through `-D $(EPOXY_CORE)`.
 
-There are currently 2 valid options for this Makefile variable:
+There are currently 3 valid options for this Makefile variable:
 
 * `EPOXY_CORE_AVR` (default)
     * Causes `Arduino.h` to emulate the Arduino AVR Core.
 * `EPOXY_CORE_ESP8266`
     * Causes `Arduino.h` to emulate the ESP8266 Core.
+* `EPOXY_CORE_ESP32`
+  * Causes `Arduino.h` to emulate the ESP32 Core.
 
 For example, setting the following in the `Makefile`:
 
@@ -731,6 +733,8 @@ Note that:
 * `EPOXY_CORE_AVR` does **not** define the `ARDUINO_ARCH_AVR` macro,
 * `EPOXY_CORE_ESP8266` does **not** define the `ESP8266` or the
   `ARDUINO_ARCH_ESP8266` macros.
+* `EPOXY_CORE_ESP32` does **not** define the `ESP32` or the
+  `ARDUINO_ARCH_ESP32` macros.
 
 This is because EpoxyDuino cannot provide perfect emulation of all the classes
 and APIs of the AVR, the ESP8266, or any other third party cores. So defining
