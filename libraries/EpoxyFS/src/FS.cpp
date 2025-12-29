@@ -161,8 +161,11 @@ File File::openNextFile() {
     if (!_fakeDir) {
         _fakeDir = std::make_shared<Dir>(_baseFS->openDir(fullName()));
     }
-    _fakeDir->next();
-    return _fakeDir->openFile("r");
+    if(_fakeDir->next()) {
+        return _fakeDir->openFile("r");
+    }
+
+    return File();
 }
 
 String File::readString()

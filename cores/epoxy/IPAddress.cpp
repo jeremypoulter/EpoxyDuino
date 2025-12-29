@@ -115,7 +115,6 @@ size_t IPAddress::printTo(Print& p) const
     return n;
 }
 
-#if defined(EPOXY_CORE_ESP8266)
 String IPAddress::toString() const
 {
     String s;
@@ -131,6 +130,5 @@ String IPAddress::toString() const
 
     return s;
 }
-#endif
 
 const IPAddress INADDR_NONE(0,0,0,0);

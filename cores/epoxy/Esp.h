@@ -27,6 +27,11 @@ class EspClass
 
     uint32_t getChipId() { return 0; }
 
+    // ESP32 Arduino compatibility helpers (used by this firmware).
+    const char* getSdkVersion() { return "epoxy"; }
+    uint64_t getEfuseMac() { return 0; }
+    uint32_t getFlashChipSize() { return 4 * 1024 * 1024; }
+
     uint32_t getCycleCount() {
       struct timeval now;
       gettimeofday(&now, NULL);

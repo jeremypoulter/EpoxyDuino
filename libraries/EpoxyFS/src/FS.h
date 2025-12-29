@@ -85,6 +85,9 @@ public:
     operator bool() const;
     const char* name() const;
     const char* fullName() const; // Includes path
+
+    // ESP32 Arduino FS compatibility
+    const char* path() const { return fullName(); }
     bool truncate(uint32_t size);
 
     bool isFile() const;

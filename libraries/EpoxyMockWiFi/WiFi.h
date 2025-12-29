@@ -41,6 +41,20 @@ typedef enum {
     WL_SCAN_RUNNING = 254
 } wl_scan_status_t;
 
+// ESP32 Arduino compatibility
+#ifndef WIFI_SCAN_RUNNING
+#define WIFI_SCAN_RUNNING WL_SCAN_RUNNING
+#endif
+
+// Scan/sort method constants used by the firmware. Values are placeholders.
+#ifndef WIFI_ALL_CHANNEL_SCAN
+#define WIFI_ALL_CHANNEL_SCAN 0
+#endif
+
+#ifndef WIFI_CONNECT_AP_BY_SIGNAL
+#define WIFI_CONNECT_AP_BY_SIGNAL 0
+#endif
+
 //-----------------------------------------------------------------------------
 // WiFi Modes
 //-----------------------------------------------------------------------------
@@ -51,6 +65,9 @@ typedef enum {
     WIFI_AP = 2,
     WIFI_AP_STA = 3
 } WiFiMode_t;
+
+// ESP32 uses wifi_mode_t; alias to keep code compiling.
+typedef WiFiMode_t wifi_mode_t;
 
 // ESP8266 compatibility
 #define WIFI_MODE_NULL WIFI_OFF
@@ -111,6 +128,10 @@ typedef enum {
 // Function pointer type for WiFi event handlers
 typedef void (*WiFiEventHandler)(WiFiEvent_t event);
 typedef std::function<void(WiFiEvent_t)> WiFiEventCb;
+
+// ESP32 Arduino provides an onEvent overload with an event-info argument.
+// The firmware's callback signature is `void (*)(WiFiEvent_t, arduino_event_info_t)`.
+typedef void (*WiFiEventHandlerInfo)(WiFiEvent_t event, arduino_event_info_t info);
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -243,6 +264,7 @@ public:
      */
     uint8_t* BSSID();
     String BSSIDstr();
+    String BSSIDstr(int /*i*/);
 
     /**
      * Get the channel of the current network
@@ -284,6 +306,12 @@ public:
      * @param max_connection maximum simultaneous connected clients (1-4)
      */
     bool softAP(const char* ssid, const char* passphrase = nullptr, int channel = 1, int ssid_hidden = 0, int max_connection = 4);
+
+    // ESP32 compatibility
+    bool softAPsetHostname(const char* hostname);
+
+    // ESP32 compatibility
+    const char* softAPgetHostname() { return getHostname(); }
 
     /**
      * Configure AP IP address
@@ -354,6 +382,10 @@ public:
      *          >0 number of found WiFi networks
      */
     int8_t scanComplete();
+
+    // ESP32 scanning compatibility (no-op in mock)
+    void setScanMethod(int /*method*/) {}
+    void setSortMethod(int /*method*/) {}
 
     /**
      * Delete last scan result from RAM
@@ -453,6 +485,9 @@ public:
      */
     void onEvent(WiFiEventHandler handler);
     void onEvent(WiFiEventCb cbEvent, WiFiEvent_t event = WIFI_EVENT_MAX);
+
+    // ESP32 Arduino compatibility (no-op in mock)
+    void onEvent(WiFiEventHandlerInfo handler);
 
     //-------------------------------------------------------------------------
     // WPS (WiFi Protected Setup)

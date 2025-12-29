@@ -178,6 +178,10 @@ String WiFiClass::BSSIDstr() {
     return String(buf);
 }
 
+String WiFiClass::BSSIDstr(int /*i*/) {
+    return BSSIDstr();
+}
+
 int32_t WiFiClass::channel() {
     return _channel;
 }
@@ -227,6 +231,10 @@ bool WiFiClass::softAP(const char* ssid, const char* passphrase, int channel, in
     _mode = (_mode == WIFI_STA) ? WIFI_AP_STA : WIFI_AP;
     
     return true;
+}
+
+bool WiFiClass::softAPsetHostname(const char* hostname) {
+    return setHostname(hostname);
 }
 
 bool WiFiClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet) {
@@ -434,6 +442,10 @@ void WiFiClass::onEvent(WiFiEventHandler handler) {
 void WiFiClass::onEvent(WiFiEventCb cbEvent, WiFiEvent_t event) {
     (void)cbEvent;
     (void)event;
+}
+
+void WiFiClass::onEvent(WiFiEventHandlerInfo handler) {
+    (void)handler;
 }
 
 //-----------------------------------------------------------------------------

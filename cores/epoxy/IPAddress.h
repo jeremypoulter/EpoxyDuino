@@ -73,9 +73,7 @@ public:
 
     virtual size_t printTo(Print& p) const;
 
-  #if defined(EPOXY_CORE_ESP8266)
     String toString() const;
-  #endif
 
     friend class EthernetClass;
     friend class UDP;
