@@ -21,6 +21,8 @@
 #include <Print.h>
 #include <functional>
 
+#include "arduino_event_shim.h"  // For arduino_event_info_t
+
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)
 //-----------------------------------------------------------------------------

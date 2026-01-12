@@ -4,6 +4,12 @@
 #include <epoxy_test/injection>
 #include "Stream.h"
 
+#if defined(EPOXY_CORE_ESP32)
+  #include "arduino_event_shim.h"
+  #include "esp32_compat.h"
+  #include "esp_system.h"
+#endif
+
 class EspClass
 {
   public:
@@ -30,7 +36,7 @@ class EspClass
     // ESP32 Arduino compatibility helpers (used by this firmware).
     const char* getSdkVersion() { return "epoxy"; }
     uint64_t getEfuseMac() { return 0; }
-    uint32_t getFlashChipSize() { return 4 * 1024 * 1024; }
+    uint32_t getFlashChipSize() { return 4u * 1024u * 1024u; }
 
     uint32_t getCycleCount() {
       struct timeval now;

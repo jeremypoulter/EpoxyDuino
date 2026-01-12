@@ -111,7 +111,8 @@ also provided:
 * [EpoxyMockSTM32RTC](libraries/EpoxyMockSTM32RTC/): mock version of the
   STM32RTC (https://github.com/stm32duino/STM32RTC) library
 * [EpoxyMockWiFi](libraries/EpoxyMockWiFi/): mock version of WiFi libraries
-  for ESP8266, ESP32, and other Arduino-compatible platforms
+  for ESP8266, ESP32, and other Arduino-compatible platforms, including
+  ArduinoOTA, DNSServer, ESPmDNS, Update, WebSocketsClient, and WiFiUdp stubs
 
 These mock libraries may be sufficient for a CI pipeline.
 

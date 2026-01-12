@@ -83,6 +83,13 @@ public:
     friend class DNSClient;
 };
 
+// Avoid INADDR_NONE macro collision between <arpa/inet.h> (mongoose)
+// and EpoxyDuino's IPAddress.h.
+
+#ifdef INADDR_NONE
+#undef INADDR_NONE
+#endif
+
 extern const IPAddress INADDR_NONE;
 
 #endif
