@@ -1,4 +1,4 @@
-#if defined(EPOXY_DUINO)
+#if defined(EPOXY_DUINO) && (defined(EPOXY_CORE_ESP8266) || defined(EPOXY_CORE_ESP32))
 
 // Storage for extern globals declared by native shim headers.
 

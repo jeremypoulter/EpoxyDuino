@@ -13,13 +13,17 @@
 #ifndef EPOXY_DUINO_PGMSPACE_H
 #define EPOXY_DUINO_PGMSPACE_H
 
+// Define PROGMEM early to avoid issues with files that use it
+// before including pgmspace.h
+#ifndef PROGMEM
+#define PROGMEM
+#endif
+
 #include <string.h>
 
 #define PGM_P const char *
 #define PGM_VOID_P const void *
 #define PSTR(str) (str)
-
-#define PROGMEM
 
 #define pgm_read_byte(p) (* (const uint8_t*) (p))
 #define pgm_read_word(p) (* (const uint16_t*) (p))
