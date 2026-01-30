@@ -15,6 +15,21 @@
 #include <map>
 #include <cstring>
 
+// IPv6 address placeholder for compatibility
+class IPv6Address {
+public:
+  IPv6Address() {}
+  IPv6Address(const IPv6Address& other) { (void)other; }
+  bool isSet() const { return false; }
+  String toString() const { return String("::"); }
+};
+
+// ESP interface type placeholder for compatibility
+enum esp_interface_t {
+  ESP_IF_WIFI_STA = 0,
+  ESP_IF_WIFI_AP = 1
+};
+
 // Forward declarations for Avahi structures
 struct AvahiClient;
 struct AvahiServiceBrowser;
@@ -110,18 +125,11 @@ public:
     return removeService(service.c_str(), proto.c_str(), port);
   }
 
-  bool publishService(const char* name, const char* service, const char* proto, uint16_t port);
-  bool publishService(String name, String service, String proto, uint16_t port) {
-    return publishService(name.c_str(), service.c_str(), proto.c_str(), port);
-  }
-
-  bool unpublishService(const char* service, const char* proto, uint16_t port);
-  bool unpublishService(String service, String proto, uint16_t port) {
-    return unpublishService(service.c_str(), proto.c_str(), port);
-  }
-
   void enableArduino(uint16_t port = 3232, bool auth = false);
   void disableArduino();
+
+  void enableWorkstation(esp_interface_t interface = ESP_IF_WIFI_STA);
+  void disableWorkstation();
 
   // Service discovery (query mode)
   IPAddress queryHost(char* host, uint32_t timeout = 2000);
@@ -143,24 +151,13 @@ public:
   // Result accessors (after queryService)
   String hostname(int idx);
   IPAddress IP(int idx);
+  IPv6Address IPv6(int idx);
   uint16_t port(int idx);
   int numTxt(int idx);
   bool hasTxt(int idx, const char* key);
   String txt(int idx, const char* key);
   String txt(int idx, int txtIdx);
   String txtKey(int idx, int txtIdx);
-
-  // Mock service registry management (for test simulation)
-  void addMockService(const String& service, const String& proto, 
-                      const String& hostname, const IPAddress& ip, 
-                      uint16_t port);
-  void addMockServiceTxt(const String& service, const String& proto,
-                         const String& hostname, const String& key, 
-                         const String& value);
-  void clearMockServices();
-  
-  // Avahi integration
-  void processAvahiEvents(int timeout_ms = 0);
   
   // For internal use by callbacks
   std::vector<MDNSService> _queryResults;
@@ -192,6 +189,17 @@ private:
   void _browseService(const char* service, const char* proto, uint32_t timeout_ms);
   bool _publishService(const char* name, const char* service, const char* proto, uint16_t port);
   void _unpublishService(const char* service, const char* proto, uint16_t port);
+  bool publishService(const char* name, const char* service, const char* proto, uint16_t port);
+  bool unpublishService(const char* service, const char* proto, uint16_t port);
+  
+  // Mock service management
+  void addMockService(const String& service, const String& proto, 
+                      const String& hostname, const IPAddress& ip, 
+                      uint16_t port);
+  void addMockServiceTxt(const String& service, const String& proto,
+                         const String& hostname, const String& key, 
+                         const String& value);
+  void clearMockServices();
 };
 
 extern MDNSResponder MDNS;

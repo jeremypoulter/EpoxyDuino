@@ -303,7 +303,7 @@ bool MDNSResponder::addService(char* service, char* proto, uint16_t port) {
   _advertisedServices.push_back(adv_svc);
 
   // Automatically publish like ESP32 does
-  return publishService(_instanceName.c_str(), service, proto, port);
+  return _publishService(_instanceName.c_str(), service, proto, port);
 }
 
 bool MDNSResponder::addServiceTxt(char* name, char* proto, char* key, char* value) {
@@ -318,7 +318,7 @@ bool MDNSResponder::addServiceTxt(char* name, char* proto, char* key, char* valu
       svc.txt_records[String(key)] = String(value);
       
       // Republish the service to include the new TXT record
-      publishService(svc.name.c_str(), svc.type.c_str(), svc.proto.c_str(), svc.port);
+      _publishService(svc.name.c_str(), svc.type.c_str(), svc.proto.c_str(), svc.port);
       
       return true;
     }
@@ -468,13 +468,24 @@ void MDNSResponder::_unpublishService(const char* service, const char* proto,
 void MDNSResponder::enableArduino(uint16_t port, bool auth) {
   (void)auth;
   // Publish Arduino OTA update service
-  publishService(_hostname.c_str(), "http", "tcp", port);
+  addService("http", "tcp", port);
   addServiceTxt("http", "tcp", "service", "arduino");
 }
 
 void MDNSResponder::disableArduino() {
   // Unpublish Arduino OTA update service
-  unpublishService("http", "tcp", 3232);
+  removeService("http", "tcp", 3232);
+}
+
+void MDNSResponder::enableWorkstation(esp_interface_t interface) {
+  // Workstation mode not supported on native builds
+  // This is a no-op for compatibility with ESP32 ESPmDNS
+  (void)interface;
+}
+
+void MDNSResponder::disableWorkstation() {
+  // Workstation mode not supported on native builds
+  // This is a no-op for compatibility with ESP32 ESPmDNS
 }
 
 //-----------------------------------------------------------------------------
@@ -595,12 +606,6 @@ void MDNSResponder::_browseService(const char* service, const char* proto,
   }
 }
 
-void MDNSResponder::processAvahiEvents(int timeout_ms) {
-  // Process pending Avahi events for the given timeout
-  // This is a no-op for now - real implementation would use main event loop
-  (void)timeout_ms;
-}
-
 //-----------------------------------------------------------------------------
 // Result Accessors
 //-----------------------------------------------------------------------------
@@ -613,6 +618,13 @@ String MDNSResponder::hostname(int idx) {
 IPAddress MDNSResponder::IP(int idx) {
   MDNSService* service = _getResult(idx);
   return service ? service->ip : IPAddress(0, 0, 0, 0);
+}
+
+IPv6Address MDNSResponder::IPv6(int idx) {
+  // IPv6 not supported in this Avahi-based implementation
+  // Return empty IPv6 address for compatibility
+  (void)idx;
+  return IPv6Address();
 }
 
 uint16_t MDNSResponder::port(int idx) {

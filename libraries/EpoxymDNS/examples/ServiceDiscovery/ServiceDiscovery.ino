@@ -49,11 +49,9 @@ void discoverService(const char* service, const char* proto) {
   
   int n = MDNS.queryService(service, proto);
   
-  // Process Avahi events to complete the query
-  // This may take up to 2 seconds for the query to complete
+  // Retry a few times to allow Avahi to complete the query
   for (int i = 0; i < 20 && n == 0; i++) {
     delay(100);
-    MDNS.processAvahiEvents(0);
     n = MDNS.queryService(service, proto);
   }
   
@@ -112,6 +110,6 @@ void setup() {
 }
 
 void loop() {
-  // Nothing to do
+  // Nothing to do - all discovery happens in setup()
   delay(1000);
 }
