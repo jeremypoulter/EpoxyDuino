@@ -4,9 +4,7 @@
 
 #include <Update.h>
 #include <ArduinoOTA.h>
-#include <ESPmDNS.h>
 
-MDNSResponder MDNS;
 UpdateClass Update;
 ArduinoOTAClass ArduinoOTA;
 
