@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <cstring>
+#include "mdns.h"
 
 // IPv6 address placeholder for compatibility
 class IPv6Address {
@@ -162,6 +163,11 @@ public:
   // For internal use by callbacks
   std::vector<MDNSService> _queryResults;
   
+  // Async query support
+  mdns_search_once_t* beginAsyncQuery(const char* service, const char* proto, uint32_t timeout_ms);
+  bool getAsyncQueryResults(mdns_search_once_t* search, mdns_result_t** results, uint32_t timeout_ms);
+  void deleteAsyncQuery(mdns_search_once_t* search);
+  
 private:
   String _hostname;
   String _instanceName;
@@ -179,6 +185,11 @@ private:
   AvahiEntryGroup* _avahi_entry_group;
   AvahiSimplePoll* _avahi_simple_poll;
   String _current_service_type;
+  
+  // Async query state tracking
+  std::map<mdns_search_once_t*, std::vector<MDNSService>> _activeAsyncQueries;
+  std::map<mdns_search_once_t*, uint32_t> _queryStartTimes;
+  std::map<mdns_search_once_t*, uint32_t> _queryTimeouts;
   
   String _makeServiceKey(const String& service, const String& proto);
   MDNSService* _getResult(int idx);

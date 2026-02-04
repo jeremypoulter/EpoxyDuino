@@ -536,10 +536,9 @@ void MDNSResponder::_browseService(const char* service, const char* proto,
                                     uint32_t timeout_ms) {
   if (!_avahi_client) return;
 
-  // Build service type string
-  String service_type = "_";
-  service_type += service;
-  service_type += "._";
+  // Build service type string (service and proto should already have underscores)
+  String service_type = service;
+  service_type += ".";
   service_type += proto;
 
   // Create a new Avahi simple poll for this query
@@ -734,3 +733,330 @@ MDNSService* MDNSResponder::_getResult(int idx) {
   }
   return &_queryResults[idx];
 }
+//-----------------------------------------------------------------------------
+// Async Query Implementation
+//-----------------------------------------------------------------------------
+
+mdns_search_once_t* MDNSResponder::beginAsyncQuery(const char* service, const char* proto, uint32_t timeout_ms) {
+  if (!service || !proto) {
+    return nullptr;
+  }
+  
+  // Create a new search handle using unique pointer value
+  void* handle = (void*)new uintptr_t(reinterpret_cast<uintptr_t>(this) + _activeAsyncQueries.size());
+  if (!handle) {
+    return nullptr;
+  }
+  
+  // Initialize query state
+  _activeAsyncQueries[(mdns_search_once_t*)handle] = std::vector<MDNSService>();
+  _queryStartTimes[(mdns_search_once_t*)handle] = millis();
+  _queryTimeouts[(mdns_search_once_t*)handle] = timeout_ms;
+  
+  // Start the browse operation immediately
+  _browseService(service, proto, timeout_ms);
+  
+  // Copy results to async query storage
+  if (!_queryResults.empty()) {
+    _activeAsyncQueries[(mdns_search_once_t*)handle] = _queryResults;
+  }
+  
+  return (mdns_search_once_t*)handle;
+}
+
+bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result_t** results, uint32_t timeout_ms) {
+  if (!search || !results) {
+    return false;
+  }
+  
+  // Check if query exists
+  auto it = _activeAsyncQueries.find(search);
+  if (it == _activeAsyncQueries.end()) {
+    return false;
+  }
+  
+  // Check if query has timed out
+  uint32_t elapsed = millis() - _queryStartTimes[search];
+  uint32_t queryTimeout = _queryTimeouts[search];
+  bool isComplete = elapsed >= queryTimeout;
+  
+  // If query not complete and no timeout specified, wait
+  if (!isComplete && timeout_ms > 0) {
+    delay(timeout_ms);
+    elapsed = millis() - _queryStartTimes[search];
+    isComplete = elapsed >= queryTimeout;
+  }
+  
+  if (isComplete) {
+    // Convert stored MDNSService results to mdns_result_t linked list
+    std::vector<MDNSService>& services = it->second;
+    
+    if (services.empty()) {
+      *results = nullptr;
+      return true;
+    }
+    
+    // Build result linked list
+    mdns_result_t* first = nullptr;
+    mdns_result_t* current = nullptr;
+    
+    for (const auto& svc : services) {
+      mdns_result_t* result = (mdns_result_t*)malloc(sizeof(mdns_result_t));
+      if (!result) break;
+      
+      memset(result, 0, sizeof(mdns_result_t));
+      
+      // Copy hostname
+      result->hostname = (char*)malloc(svc.hostname.length() + 1);
+      if (result->hostname) {
+        strcpy(result->hostname, svc.hostname.c_str());
+      }
+      
+      // Copy IP address
+      mdns_ip_addr_t* addr = (mdns_ip_addr_t*)malloc(sizeof(mdns_ip_addr_t));
+      if (addr) {
+        addr->u_addr.addr = svc.ip;
+        addr->next = nullptr;
+        result->addr = addr;
+      }
+      
+      result->port = svc.port;
+      result->ttl = 4500;
+      result->tcpip_if = MDNS_IF_STA;
+      result->ip_protocol = MDNS_IP_PROTOCOL_V4;
+      
+      // Copy TXT records
+      if (!svc.txt_records.empty()) {
+        result->txt_count = svc.txt_records.size();
+        result->txt = (mdns_txt_item_t*)malloc(result->txt_count * sizeof(mdns_txt_item_t));
+        result->txt_value_len = (uint8_t*)malloc(result->txt_count);
+        
+        int idx = 0;
+        for (const auto& txt_pair : svc.txt_records) {
+          char* key_buf = (char*)malloc(txt_pair.first.length() + 1);
+          if (key_buf) {
+            strcpy(key_buf, txt_pair.first.c_str());
+            result->txt[idx].key = const_cast<const char*>(key_buf);
+          }
+          char* val_buf = (char*)malloc(txt_pair.second.length() + 1);
+          if (val_buf) {
+            strcpy(val_buf, txt_pair.second.c_str());
+            result->txt[idx].value = const_cast<const char*>(val_buf);
+          }
+          result->txt_value_len[idx] = txt_pair.second.length();
+          idx++;
+        }
+      }
+      
+      // Link to chain
+      if (!first) {
+        first = result;
+        current = result;
+      } else {
+        current->next = result;
+        current = result;
+      }
+    }
+    
+    *results = first;
+  }
+  
+  return isComplete;
+}
+
+void MDNSResponder::deleteAsyncQuery(mdns_search_once_t* search) {
+  if (!search) {
+    return;
+  }
+  
+  // Remove from tracking maps
+  _activeAsyncQueries.erase(search);
+  _queryStartTimes.erase(search);
+  _queryTimeouts.erase(search);
+  
+  // Free the opaque handle
+  delete (uintptr_t*)search;
+}
+
+//-----------------------------------------------------------------------------
+// C API Wrappers for Async mDNS Functions
+//-----------------------------------------------------------------------------
+
+extern "C" {
+
+int mdns_init(void) {
+  return 0;  // ESP_OK
+}
+
+void mdns_free(void) {
+}
+
+int mdns_hostname_set(const char * hostname) {
+  if (!hostname) {
+    return -1;  // ESP_ERR_INVALID_ARG
+  }
+  return MDNS.begin(hostname) ? 0 : -1;
+}
+
+mdns_search_once_t * mdns_query_async_start(
+    const char * name,
+    const char * service_type,
+    const char * proto,
+    mdns_ip_protocol_t type,
+    uint32_t timeout_ms,
+    size_t max_results,
+    mdns_query_notify_t notifier) {
+  
+  (void)name;        // Unused for now
+  (void)type;        // Unused for now
+  (void)max_results; // Unused for now
+  (void)notifier;    // Callback support can be added later
+  
+  if (!service_type || !proto) {
+    return nullptr;
+  }
+  
+  // Build full service type if needed
+  String fullServiceType = service_type;
+  if (!fullServiceType.startsWith("_")) {
+    fullServiceType = "_" + fullServiceType;
+  }
+  
+  String fullProto = proto;
+  if (!fullProto.startsWith("_")) {
+    fullProto = "_" + fullProto;
+  }
+  
+  return MDNS.beginAsyncQuery(fullServiceType.c_str(), fullProto.c_str(), timeout_ms);
+}
+
+bool mdns_query_async_get_results(
+    mdns_search_once_t * search,
+    mdns_result_t ** results,
+    uint32_t timeout_ms) {
+  
+  if (!search || !results) {
+    return false;
+  }
+  
+  return MDNS.getAsyncQueryResults(search, results, timeout_ms);
+}
+
+int mdns_query_async_delete(mdns_search_once_t * search) {
+  if (!search) {
+    return -1;  // ESP_ERR_INVALID_ARG
+  }
+  
+  MDNS.deleteAsyncQuery(search);
+  return 0;  // ESP_OK
+}
+
+void mdns_query_results_free(mdns_result_t * results) {
+  if (!results) {
+    return;
+  }
+  
+  mdns_result_t* current = results;
+  while (current) {
+    mdns_result_t* next = current->next;
+    
+    // Free TXT records
+    if (current->txt) {
+      for (size_t i = 0; i < current->txt_count; i++) {
+        if (current->txt[i].key) {
+          free(const_cast<char*>(current->txt[i].key));
+        }
+        if (current->txt[i].value) {
+          free(const_cast<char*>(current->txt[i].value));
+        }
+      }
+      free(current->txt);
+    }
+    if (current->txt_value_len) {
+      free(current->txt_value_len);
+    }
+    
+    // Free IP addresses
+    mdns_ip_addr_t* addr = current->addr;
+    while (addr) {
+      mdns_ip_addr_t* next_addr = addr->next;
+      free(addr);
+      addr = next_addr;
+    }
+    
+    // Free strings
+    if (current->hostname) {
+      free(current->hostname);
+    }
+    if (current->instance_name) {
+      free(current->instance_name);
+    }
+    if (current->service_type) {
+      free(current->service_type);
+    }
+    if (current->proto) {
+      free(current->proto);
+    }
+    
+    free(current);
+    current = next;
+  }
+}
+
+int mdns_service_add(
+    const char *instance,
+    const char *service,
+    const char *proto,
+    uint16_t port,
+    mdns_txt_item_t txt[],
+    size_t txt_count) {
+  
+  (void)instance;  // Instance name not used in current implementation
+  
+  if (!service || !proto) {
+    return -1;
+  }
+  
+  if (!MDNS.addService(const_cast<char*>(service), const_cast<char*>(proto), port)) {
+    return -1;
+  }
+  
+  // Add TXT records
+  for (size_t i = 0; i < txt_count; i++) {
+    if (txt[i].key && txt[i].value) {
+      MDNS.addServiceTxt(const_cast<char*>(service), const_cast<char*>(proto), 
+                        const_cast<char*>(txt[i].key), const_cast<char*>(txt[i].value));
+    }
+  }
+  
+  return 0;
+}
+
+int mdns_service_remove(const char *service, const char *proto) {
+  if (!service || !proto) {
+    return -1;
+  }
+  
+  if (!MDNS.removeService(const_cast<char*>(service), const_cast<char*>(proto), 0)) {
+    return -1;
+  }
+  
+  return 0;
+}
+
+int mdns_service_txt_set(
+    const char *service,
+    const char *proto,
+    const char *key,
+    const char *value) {
+  
+  if (!service || !proto || !key || !value) {
+    return -1;
+  }
+  
+  MDNS.addServiceTxt(const_cast<char*>(service), const_cast<char*>(proto), 
+                    const_cast<char*>(key), const_cast<char*>(value));
+  return 0;
+}
+
+}  // extern "C"
