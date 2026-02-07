@@ -815,7 +815,8 @@ bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result
       // Copy IP address
       mdns_ip_addr_t* addr = (mdns_ip_addr_t*)malloc(sizeof(mdns_ip_addr_t));
       if (addr) {
-        addr->u_addr.addr = svc.ip;
+        addr->addr.u_addr.ip4.addr = svc.ip;
+        addr->addr.type = 0;  // IPv4
         addr->next = nullptr;
         result->addr = addr;
       }
@@ -884,31 +885,31 @@ void MDNSResponder::deleteAsyncQuery(mdns_search_once_t* search) {
 
 extern "C" {
 
-int mdns_init(void) {
-  return 0;  // ESP_OK
+esp_err_t mdns_init(void) {
+  return ESP_OK;
 }
 
 void mdns_free(void) {
 }
 
-int mdns_hostname_set(const char * hostname) {
+esp_err_t mdns_hostname_set(const char * hostname) {
   if (!hostname) {
-    return -1;  // ESP_ERR_INVALID_ARG
+    return ESP_ERR_INVALID_ARG;
   }
-  return MDNS.begin(hostname) ? 0 : -1;
+  return MDNS.begin(hostname) ? ESP_OK : ESP_ERR_INVALID_ARG;
 }
 
-mdns_search_once_t * mdns_query_async_start(
+mdns_search_once_t * mdns_query_async_new(
     const char * name,
     const char * service_type,
     const char * proto,
-    mdns_ip_protocol_t type,
+    uint16_t type,
     uint32_t timeout_ms,
     size_t max_results,
     mdns_query_notify_t notifier) {
   
-  (void)name;        // Unused for now
-  (void)type;        // Unused for now
+  (void)name;        // Unused for now - only PTR queries supported
+  (void)type;        // Query type (MDNS_TYPE_*) - for future use
   (void)max_results; // Unused for now
   (void)notifier;    // Callback support can be added later
   
@@ -932,23 +933,23 @@ mdns_search_once_t * mdns_query_async_start(
 
 bool mdns_query_async_get_results(
     mdns_search_once_t * search,
-    mdns_result_t ** results,
-    uint32_t timeout_ms) {
+    uint32_t timeout,
+    mdns_result_t ** results) {
   
   if (!search || !results) {
     return false;
   }
   
-  return MDNS.getAsyncQueryResults(search, results, timeout_ms);
+  return MDNS.getAsyncQueryResults(search, results, timeout);
 }
 
-int mdns_query_async_delete(mdns_search_once_t * search) {
+esp_err_t mdns_query_async_delete(mdns_search_once_t * search) {
   if (!search) {
-    return -1;  // ESP_ERR_INVALID_ARG
+    return ESP_ERR_INVALID_ARG;
   }
   
   MDNS.deleteAsyncQuery(search);
-  return 0;  // ESP_OK
+  return ESP_OK;
 }
 
 void mdns_query_results_free(mdns_result_t * results) {
@@ -1003,7 +1004,7 @@ void mdns_query_results_free(mdns_result_t * results) {
   }
 }
 
-int mdns_service_add(
+esp_err_t mdns_service_add(
     const char *instance,
     const char *service,
     const char *proto,
@@ -1014,11 +1015,11 @@ int mdns_service_add(
   (void)instance;  // Instance name not used in current implementation
   
   if (!service || !proto) {
-    return -1;
+    return ESP_ERR_INVALID_ARG;
   }
   
   if (!MDNS.addService(const_cast<char*>(service), const_cast<char*>(proto), port)) {
-    return -1;
+    return ESP_ERR_INVALID_STATE;
   }
   
   // Add TXT records
@@ -1029,34 +1030,34 @@ int mdns_service_add(
     }
   }
   
-  return 0;
+  return ESP_OK;
 }
 
-int mdns_service_remove(const char *service, const char *proto) {
+esp_err_t mdns_service_remove(const char *service, const char *proto) {
   if (!service || !proto) {
-    return -1;
+    return ESP_ERR_INVALID_ARG;
   }
   
   if (!MDNS.removeService(const_cast<char*>(service), const_cast<char*>(proto), 0)) {
-    return -1;
+    return ESP_ERR_INVALID_STATE;
   }
   
-  return 0;
+  return ESP_OK;
 }
 
-int mdns_service_txt_set(
+esp_err_t mdns_service_txt_set(
     const char *service,
     const char *proto,
     const char *key,
     const char *value) {
   
   if (!service || !proto || !key || !value) {
-    return -1;
+    return ESP_ERR_INVALID_ARG;
   }
   
   MDNS.addServiceTxt(const_cast<char*>(service), const_cast<char*>(proto), 
                     const_cast<char*>(key), const_cast<char*>(value));
-  return 0;
+  return ESP_OK;
 }
 
 }  // extern "C"
