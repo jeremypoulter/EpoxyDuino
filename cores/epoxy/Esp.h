@@ -5,7 +5,6 @@
 #include "Stream.h"
 
 #if defined(EPOXY_CORE_ESP32)
-  #include "arduino_event_shim.h"
   #include "esp32_compat.h"
   #include "esp_system.h"
 #endif
