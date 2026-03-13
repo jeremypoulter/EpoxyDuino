@@ -16,6 +16,9 @@
 #include <cstring>
 #include <iostream>
 #include <ctime>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
 
 // Global MDNS instance
 MDNSResponder MDNS;
@@ -164,6 +167,9 @@ static void resolve_callback(
       break;
     }
     case AVAHI_RESOLVER_FAILURE:
+      std::cerr << "Avahi resolver failure for '" << (name ? name : "?") << "': "
+                << avahi_strerror(avahi_client_errno(
+                     avahi_service_resolver_get_client(r))) << std::endl;
       break;
   }
 
@@ -403,6 +409,48 @@ bool MDNSResponder::_publishService(const char* name, const char* service,
   service_type += "._";
   service_type += proto;
 
+  // Use the configured mDNS host target when available; nullptr makes Avahi
+  // fall back to the system hostname.
+  String host_target = _hostname;
+  if (host_target.length() > 0 && !host_target.endsWith(".local")) {
+    host_target += ".local";
+  }
+  const char* avahi_host = host_target.length() > 0 ? host_target.c_str() : nullptr;
+
+  // Register address records for the custom hostname so that service
+  // resolution succeeds.  Without this, resolvers cannot turn the hostname
+  // in the SRV record into an IP address and silently drop the service.
+  if (avahi_host) {
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == 0) {
+      for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+        if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+        if (!(ifa->ifa_flags & IFF_UP)) continue;
+
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+          struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
+          AvahiAddress addr;
+          addr.proto = AVAHI_PROTO_INET;
+          addr.data.ipv4.address = sin->sin_addr.s_addr;
+
+          int addr_ret = avahi_entry_group_add_address(
+              _avahi_entry_group,
+              AVAHI_IF_UNSPEC,
+              AVAHI_PROTO_INET,
+              (AvahiPublishFlags)0,
+              avahi_host,
+              &addr);
+          if (addr_ret < 0 && addr_ret != AVAHI_ERR_COLLISION) {
+            std::cerr << "Failed to add address record for " << avahi_host
+                      << ": " << avahi_strerror(addr_ret) << std::endl;
+          }
+        }
+      }
+      freeifaddrs(ifaddr);
+    }
+  }
+
   // Build TXT records using AvahiStringList
   AvahiStringList* txt_list = nullptr;
   for (auto& svc : _advertisedServices) {
@@ -424,7 +472,7 @@ bool MDNSResponder::_publishService(const char* name, const char* service,
       name,
       service_type.c_str(),
       "local",
-      nullptr,
+      avahi_host,
       port,
       txt_list);
 
