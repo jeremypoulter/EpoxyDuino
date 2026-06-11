@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define UPDATE_SIZE_UNKNOWN 0xFFFFFFFF
+
 class UpdateClass {
  public:
   bool isRunning() const { return false; }
