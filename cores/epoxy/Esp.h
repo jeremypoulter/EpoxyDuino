@@ -36,6 +36,8 @@ class EspClass
     const char* getSdkVersion() { return "epoxy"; }
     uint64_t getEfuseMac() { return 0; }
     uint32_t getFlashChipSize() { return 4u * 1024u * 1024u; }
+    uint32_t getHeapSize() { return getFreeHeap(); }
+    uint32_t getSketchSize() { return 0; }
 
     uint32_t getCycleCount() {
       struct timeval now;

@@ -244,15 +244,9 @@ class EpoxyFSImpl: public FSImpl {
 
     bool format() override;
 
-    bool info(FSInfo& /*info*/) override {
-      // TODO: Implement me
-      return true;
-    }
+    bool info(FSInfo& info) override;
 
-    bool info64(FSInfo64& /*info*/) override {
-      // TODO: Implement me
-      return true;
-    }
+    bool info64(FSInfo64& info) override;
 
     FileImplPtr open(
         const char* path,

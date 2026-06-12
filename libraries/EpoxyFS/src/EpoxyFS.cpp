@@ -1,6 +1,8 @@
 #include <stdio.h> // remove()
 #include <ftw.h> // nftw()
 #include <string>
+#include <stdlib.h>
+#include <limits>
 #include "EpoxyFS.h"
 
 using std::string;
@@ -104,10 +106,89 @@ static int removeFileOrDir(
   return status;
 }
 
+namespace {
+
+uint64_t getConfiguredTotalBytes() {
+  const char* envSize = getenv("EPOXY_FS_SIZE_BYTES");
+  if (envSize != nullptr && envSize[0] != '\0') {
+    char* end = nullptr;
+    unsigned long long parsed = strtoull(envSize, &end, 10);
+    if (end != envSize && parsed > 0ULL) {
+      return (uint64_t) parsed;
+    }
+  }
+
+  // A practical default for native host tests when no explicit size is set.
+  return 4ULL * 1024ULL * 1024ULL;
+}
+
+struct UsedBytesContext {
+  uint64_t usedBytes;
+};
+
+static UsedBytesContext* g_usedBytesContext = nullptr;
+
+int accumulateUsedBytes(const char* /*fpath*/, const struct stat* sb, int typeflag,
+    struct FTW* /*ftwbuf*/) {
+  if (typeflag != FTW_F || sb == nullptr) {
+    return 0;
+  }
+
+  UsedBytesContext* ctx = g_usedBytesContext;
+  if (ctx != nullptr) {
+    ctx->usedBytes += (uint64_t) sb->st_size;
+  }
+  return 0;
+}
+
+} // namespace
+
 bool EpoxyFSImpl::format() {
   int status = nftw(fsroot_, removeFileOrDir, 5 /*nopenfd*/,
       FTW_PHYS | FTW_MOUNT | FTW_DEPTH);
   return status == 0;
+}
+
+bool EpoxyFSImpl::info(FSInfo& info) {
+  FSInfo64 info64Data;
+  if (!info64(info64Data)) {
+    return false;
+  }
+
+  const uint64_t maxSizeT = (uint64_t) std::numeric_limits<size_t>::max();
+  info.totalBytes = (size_t) ((info64Data.totalBytes > maxSizeT)
+      ? maxSizeT
+      : info64Data.totalBytes);
+  info.usedBytes = (size_t) ((info64Data.usedBytes > maxSizeT)
+      ? maxSizeT
+      : info64Data.usedBytes);
+  info.blockSize = info64Data.blockSize;
+  info.pageSize = info64Data.pageSize;
+  info.maxOpenFiles = info64Data.maxOpenFiles;
+  info.maxPathLength = info64Data.maxPathLength;
+  return true;
+}
+
+bool EpoxyFSImpl::info64(FSInfo64& info) {
+  if (fsroot_ == nullptr) {
+    return false;
+  }
+
+  UsedBytesContext ctx = {0};
+  g_usedBytesContext = &ctx;
+  int status = nftw(fsroot_, accumulateUsedBytes, 5 /*nopenfd*/, FTW_PHYS | FTW_MOUNT);
+  g_usedBytesContext = nullptr;
+  if (status != 0) {
+    return false;
+  }
+
+  info.totalBytes = getConfiguredTotalBytes();
+  info.usedBytes = ctx.usedBytes;
+  info.blockSize = 4096;
+  info.pageSize = 256;
+  info.maxOpenFiles = 0;
+  info.maxPathLength = 255;
+  return true;
 }
 
 } // fs

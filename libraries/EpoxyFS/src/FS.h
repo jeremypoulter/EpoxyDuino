@@ -213,6 +213,21 @@ public:
     bool format();
     bool info(FSInfo& info);
     bool info64(FSInfo64& info);
+    size_t totalBytes() {
+        FSInfo64 info;
+        if (!info64(info)) {
+            return 0;
+        }
+        return (size_t) info.totalBytes;
+    }
+
+    size_t usedBytes() {
+        FSInfo64 info;
+        if (!info64(info)) {
+            return 0;
+        }
+        return (size_t) info.usedBytes;
+    }
 
     File open(const char* path, const char* mode = FILE_READ);
     File open(const String& path, const char* mode = FILE_READ);
