@@ -42,7 +42,8 @@ void EpoxyEepromEsp::begin(size_t size) {
   const char* dataPath = getDataPath();
   FILE* fp = fopen(dataPath, "rb");
   if (fp) {
-    fread(data_, 1, size_, fp);
+    size_t n = fread(data_, 1, size_, fp);
+    (void) n; /* Ignore unused result */
     fclose(fp);
   }
 }

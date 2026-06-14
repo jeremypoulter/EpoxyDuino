@@ -55,13 +55,15 @@ const char* EpoxyEepromAvr::getDataPath() {
 uint8_t EERef::operator*() const {
 	char c = 0;
   // Ignore errors because the EEPROM API has no mechanism for dealing them.
-	pread(fd, &c, 1, index);
+	ssize_t n = pread(fd, &c, 1, index);
+	(void) n; /* Ignore unused result */
   return c;
 }
 
 EERef& EERef::operator=(uint8_t in) {
   // Ignore errors because the EEPROM API has no mechanism for dealing them.
-  pwrite(fd, &in, 1, index);
+  ssize_t n = pwrite(fd, &in, 1, index);
+  (void) n; /* Ignore unused result */
   return  *this;
 }
 
