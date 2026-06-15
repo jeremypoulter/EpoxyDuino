@@ -20,6 +20,8 @@ class UpdateClass {
   bool hasError() const { return false; }
   int getError() const { return 0; }
   void printError(void* /*out*/) const {}
+  void abort() {}
+  const char* errorString() const { return "No error"; }
 };
 
 extern UpdateClass Update;
