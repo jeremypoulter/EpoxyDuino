@@ -20,8 +20,26 @@
 #include <IPAddress.h>
 #include <Print.h>
 #include <functional>
+#include <vector>
 
 #include "arduino_event_shim.h"  // For arduino_event_info_t
+
+//-----------------------------------------------------------------------------
+// Mock SSID constants for deterministic connect-outcome testing
+//-----------------------------------------------------------------------------
+
+/** Connect succeeds; localIP() returns host's primary IPv4 address. */
+#define EPX_SSID_OK       "EPX_OK"
+/** Connect fails with WL_CONNECT_FAILED (bad password). */
+#define EPX_SSID_BADPASS  "EPX_BADPASS"
+/** Connect fails with WL_CONNECTION_LOST (simulated timeout). */
+#define EPX_SSID_TIMEOUT  "EPX_TIMEOUT"
+/** Connect transitions to WL_CONNECTED but localIP() returns 0.0.0.0. */
+#define EPX_SSID_NOIP     "EPX_NOIP"
+/** Alternates WL_CONNECTED / WL_CONNECT_FAILED on successive begin() calls. */
+#define EPX_SSID_FLAPPY   "EPX_FLAPPY"
+/** Hidden network: connectable by exact SSID; omitted from default scans. */
+#define EPX_SSID_HIDDEN   "EPX_HIDDEN"
 
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)
@@ -175,6 +193,9 @@ typedef enum {
     ARDUINO_EVENT_PROV_CRED_FAIL,
     ARDUINO_EVENT_PROV_CRED_SUCCESS,
     ARDUINO_EVENT_MAX
+#else
+    // Generic / EpoxyDuino fallback – just provide a sentinel value
+    ARDUINO_EVENT_MAX = 0
 #endif
 } WiFiEvent_t;
 
@@ -197,14 +218,28 @@ class WiFiServer;
 // WiFiClass - Main WiFi control class
 //-----------------------------------------------------------------------------
 
+/**
+ * A single entry in the mock network scan result list.
+ */
+struct MockScanEntry {
+    String ssid;
+    int32_t rssi;
+    uint8_t encryptionType;  // wifi_auth_mode_t value
+    int32_t channel;
+    uint8_t bssid[6];
+    bool isHidden;
+};
+
 class WiFiClass {
 private:
+    // STA state
     wl_status_t _status;
     WiFiMode_t _mode;
     IPAddress _localIP;
     IPAddress _subnetMask;
     IPAddress _gatewayIP;
     IPAddress _dnsIP;
+    bool _staticIPConfigured;  // true when config() has been called
     String _ssid;
     String _psk;
     String _hostname;
@@ -212,6 +247,30 @@ private:
     uint8_t _macAddress[6];
     bool _autoConnect;
     bool _persistent;
+
+    // AP state (kept separate from STA so both can be active simultaneously)
+    bool _apEnabled;
+    String _apSsid;
+    String _apPsk;
+    int _apChannel;
+    bool _apHidden;
+    int _apMaxConn;
+    IPAddress _apLocalIP;
+    IPAddress _apGatewayIP;
+    IPAddress _apSubnetMask;
+
+    // Scan cache
+    std::vector<MockScanEntry> _scanResults;
+
+    // EPX_FLAPPY attempt counter (0 = no attempts yet)
+    int _flappyCounter;
+
+    // Populate scan results with default mock entries.
+    void _initDefaultScanResults();
+
+    // Resolve the host machine's primary non-loopback IPv4 address.
+    // Returns 127.0.0.1 if resolution fails.
+    static IPAddress _getHostIPv4();
 
 public:
     WiFiClass();
@@ -370,6 +429,11 @@ public:
      * Configure AP IP address
      */
     bool softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet);
+
+    /**
+     * Get the SSID of the current AP
+     */
+    String softAPSSID() const;
 
     /**
      * Get AP IP address
@@ -582,6 +646,26 @@ public:
     void mockSetLocalIP(IPAddress ip) { _localIP = ip; }
     void mockSetSSID(const String& ssid) { _ssid = ssid; }
     void mockSetRSSI(int8_t rssi) { (void)rssi; }  // Could store if needed
+
+    /**
+     * Replace the entire scan result list with a custom list.
+     * Pass an empty vector to clear all entries.
+     */
+    void mockSetScanResults(const std::vector<MockScanEntry>& results) {
+        _scanResults = results;
+    }
+
+    /**
+     * Append a single entry to the scan result list.
+     */
+    void mockAddScanResult(const MockScanEntry& entry) {
+        _scanResults.push_back(entry);
+    }
+
+    /**
+     * Restore all state to construction defaults and repopulate the
+     * default mock scan list.
+     */
     void mockReset();
 #endif
 

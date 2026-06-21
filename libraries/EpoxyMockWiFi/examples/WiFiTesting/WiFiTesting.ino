@@ -46,8 +46,8 @@ void loop() {
 }
 
 void testWiFiConnection() {
-    Serial.println("TEST: WiFi Connection");
-    Serial.println("---------------------");
+    Serial.println("TEST: WiFi Connection (EPX_OK)");
+    Serial.println("------------------------------");
     
     #if defined(EPOXY_DUINO)
     // Reset WiFi state
@@ -58,21 +58,20 @@ void testWiFiConnection() {
     Serial.print("Status: ");
     Serial.println(WiFi.status());
     
-    // Begin connection
-    WiFi.begin("TestSSID", "TestPassword");
-    Serial.println("Called WiFi.begin()");
+    // Connect using EPX_OK – guaranteed success, localIP = host IP
+    WiFi.begin(EPX_SSID_OK, "anypassword");
+    Serial.println("Called WiFi.begin(EPX_SSID_OK)");
     
-    // In mock, it connects immediately, but we can simulate delay
-    Serial.print("Status: ");
+    Serial.print("Status (expect WL_CONNECTED=3): ");
     Serial.println(WiFi.status());
     Serial.print("Connected: ");
     Serial.println(WiFi.isConnected() ? "Yes" : "No");
-    Serial.print("IP: ");
+    Serial.print("IP (host address): ");
     Serial.println(WiFi.localIP());
     Serial.print("SSID: ");
     Serial.println(WiFi.SSID());
     
-    // Manually set different IP for testing
+    // Manually override IP for testing
     WiFi.mockSetLocalIP(IPAddress(10, 0, 0, 50));
     Serial.print("After mockSetLocalIP: ");
     Serial.println(WiFi.localIP());
@@ -82,25 +81,38 @@ void testWiFiConnection() {
 }
 
 void testWiFiDisconnect() {
-    Serial.println("TEST: WiFi Disconnect");
-    Serial.println("---------------------");
+    Serial.println("TEST: WiFi Disconnect / Bad SSIDs");
+    Serial.println("----------------------------------");
     
     #if defined(EPOXY_DUINO)
-    // Start connected
-    WiFi.begin("TestSSID", "TestPassword");
-    Serial.print("Initial: Connected = ");
-    Serial.println(WiFi.isConnected() ? "Yes" : "No");
-    
+    WiFi.mockReset();
+
+    // EPX_BADPASS – auth failure
+    WiFi.begin(EPX_SSID_BADPASS, "wrongpass");
+    Serial.print("EPX_BADPASS status (expect WL_CONNECT_FAILED=4): ");
+    Serial.println(WiFi.status());
+
+    // EPX_TIMEOUT – simulated timeout
+    WiFi.begin(EPX_SSID_TIMEOUT, "anypassword");
+    Serial.print("EPX_TIMEOUT status (expect WL_CONNECTION_LOST=5): ");
+    Serial.println(WiFi.status());
+
+    // EPX_NOIP – connected but no IP
+    WiFi.begin(EPX_SSID_NOIP);
+    Serial.print("EPX_NOIP status (expect WL_CONNECTED=3): ");
+    Serial.println(WiFi.status());
+    Serial.print("EPX_NOIP localIP (expect 0.0.0.0): ");
+    Serial.println(WiFi.localIP());
+
     // Disconnect
+    WiFi.begin(EPX_SSID_OK, "anypassword");
     WiFi.disconnect();
     Serial.print("After disconnect: Connected = ");
     Serial.println(WiFi.isConnected() ? "Yes" : "No");
-    Serial.print("Status: ");
-    Serial.println(WiFi.status());
     
-    // Simulate disconnection state
+    // Mock status override
     WiFi.mockSetStatus(WL_CONNECTION_LOST);
-    Serial.print("After simulating connection loss: ");
+    Serial.print("After mockSetStatus(WL_CONNECTION_LOST): ");
     Serial.println(WiFi.status());
     
     Serial.println();
@@ -123,9 +135,9 @@ void testStaticIP() {
     WiFi.config(staticIP, gateway, subnet, dns);
     Serial.println("Configured static IP");
     
-    WiFi.begin("TestSSID", "TestPassword");
+    WiFi.begin(EPX_SSID_OK, "anypassword");
     
-    Serial.print("IP: ");
+    Serial.print("IP (expect 192.168.1.150): ");
     Serial.println(WiFi.localIP());
     Serial.print("Gateway: ");
     Serial.println(WiFi.gatewayIP());
@@ -148,9 +160,11 @@ void testAPMode() {
     // Start in AP mode
     WiFi.softAP("TestAP", "password123", 6);
     
-    Serial.print("Mode: ");
+    Serial.print("Mode (expect WIFI_AP=2): ");
     Serial.println(WiFi.getMode());
-    Serial.print("AP IP: ");
+    Serial.print("AP SSID: ");
+    Serial.println(WiFi.softAPSSID());
+    Serial.print("AP IP (expect 192.168.4.1): ");
     Serial.println(WiFi.softAPIP());
     Serial.print("AP MAC: ");
     Serial.println(WiFi.softAPmacAddress());
@@ -158,11 +172,11 @@ void testAPMode() {
     Serial.println(WiFi.softAPgetStationNum());
     
     // Test AP+STA mode
-    WiFi.begin("TestSSID", "TestPassword");
-    Serial.print("Mode after WiFi.begin(): ");
+    WiFi.begin(EPX_SSID_OK, "anypassword");
+    Serial.print("Mode after WiFi.begin() (expect AP+STA=3): ");
     Serial.println(WiFi.getMode());
-    Serial.println("(Should be AP+STA)");
     
     Serial.println();
     #endif
 }
+
