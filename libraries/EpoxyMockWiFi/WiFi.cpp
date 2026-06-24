@@ -57,6 +57,8 @@ WiFiClass::WiFiClass()
     _macAddress[4] = 0xFE;
     _macAddress[5] = 0xED;
 
+    memset(_bssidScratch, 0, sizeof(_bssidScratch));
+
     _initDefaultScanResults();
 }
 
@@ -155,66 +157,8 @@ void WiFiClass::_initDefaultScanResults() {
         e.isHidden = true;
         _scanResults.push_back(e);
     }
-    // EPX_OPEN – open auth network
-    {
-        MockScanEntry e;
-        e.ssid = EPX_SSID_OPEN;
-        e.rssi = -52;
-        e.encryptionType = WIFI_AUTH_OPEN;
-        e.channel = 4;
-        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
-        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x07;
-        e.isHidden = false;
-        _scanResults.push_back(e);
-    }
-    // EPX_WEP – WEP auth network
-    {
-        MockScanEntry e;
-        e.ssid = EPX_SSID_WEP;
-        e.rssi = -67;
-        e.encryptionType = WIFI_AUTH_WEP;
-        e.channel = 2;
-        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
-        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x08;
-        e.isHidden = false;
-        _scanResults.push_back(e);
-    }
-    // EPX_WPA – WPA-PSK auth network
-    {
-        MockScanEntry e;
-        e.ssid = EPX_SSID_WPA;
-        e.rssi = -59;
-        e.encryptionType = WIFI_AUTH_WPA_PSK;
-        e.channel = 8;
-        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
-        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x09;
-        e.isHidden = false;
-        _scanResults.push_back(e);
-    }
-    // EPX_WPA2 – WPA2-PSK auth network
-    {
-        MockScanEntry e;
-        e.ssid = EPX_SSID_WPA2;
-        e.rssi = -50;
-        e.encryptionType = WIFI_AUTH_WPA2_PSK;
-        e.channel = 6;
-        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
-        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x0A;
-        e.isHidden = false;
-        _scanResults.push_back(e);
-    }
-    // EPX_WPA3 – WPA3-PSK auth network
-    {
-        MockScanEntry e;
-        e.ssid = EPX_SSID_WPA3;
-        e.rssi = -61;
-        e.encryptionType = WIFI_AUTH_WPA3_PSK;
-        e.channel = 10;
-        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
-        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x0B;
-        e.isHidden = false;
-        _scanResults.push_back(e);
-    }
+
+    _scanView = _scanResults;
 }
 
 IPAddress WiFiClass::_getHostIPv4() {
@@ -289,11 +233,14 @@ wl_status_t WiFiClass::begin(const char* ssid, const char *passphrase) {
             _localIP = IPAddress(0, 0, 0, 0);
         }
     } else if (_ssid == EPX_SSID_NOIP) {
-        // L2 connected but no usable DHCP address
+        // L2 connected but no usable DHCP address. A static IP configured via
+        // config() still takes priority and is honoured here.
         _status = WL_CONNECTED;
-        _localIP = IPAddress(0, 0, 0, 0);
-        _gatewayIP = IPAddress(0, 0, 0, 0);
-        _dnsIP = IPAddress(0, 0, 0, 0);
+        if (!_staticIPConfigured) {
+            _localIP = IPAddress(0, 0, 0, 0);
+            _gatewayIP = IPAddress(0, 0, 0, 0);
+            _dnsIP = IPAddress(0, 0, 0, 0);
+        }
     } else if (_ssid == EPX_SSID_FLAPPY) {
         _flappyCounter++;
         if (_flappyCounter % 2 == 1) {
@@ -309,18 +256,6 @@ wl_status_t WiFiClass::begin(const char* ssid, const char *passphrase) {
         }
     } else if (_ssid == EPX_SSID_HIDDEN) {
         // Hidden network – connectable by exact SSID
-        _status = WL_CONNECTED;
-        _localIP = successIP;
-        if (!_staticIPConfigured) {
-            _gatewayIP = IPAddress(0, 0, 0, 0);
-            _dnsIP = IPAddress(0, 0, 0, 0);
-        }
-    } else if (_ssid == EPX_SSID_OPEN ||
-               _ssid == EPX_SSID_WEP ||
-               _ssid == EPX_SSID_WPA ||
-               _ssid == EPX_SSID_WPA2 ||
-               _ssid == EPX_SSID_WPA3) {
-        // Auth-mode specific deterministic success SSIDs.
         _status = WL_CONNECTED;
         _localIP = successIP;
         if (!_staticIPConfigured) {
@@ -533,7 +468,9 @@ bool WiFiClass::softAP(const char* ssid, const char* passphrase, int channel, in
     _apHidden = (ssid_hidden != 0);
     _apMaxConn = max_connection;
     _apEnabled = true;
-    _mode = (_mode == WIFI_STA) ? WIFI_AP_STA : WIFI_AP;
+    // Preserve STA when it is already (or also) enabled so AP+STA can run
+    // simultaneously; only switch to AP-only when STA is not active.
+    _mode = (_mode == WIFI_STA || _mode == WIFI_AP_STA) ? WIFI_AP_STA : WIFI_AP;
     return true;
 }
 
@@ -580,10 +517,24 @@ uint8_t WiFiClass::softAPgetStationNum() {
 }
 
 bool WiFiClass::softAPdisconnect(bool wifioff) {
+    // Tear down the AP and clear its stored configuration so that
+    // softAPSSID()/softAPIP() reflect the disconnected state.
     _apEnabled = false;
+    _apSsid = "";
+    _apPsk = "";
+    _apChannel = 1;
+    _apHidden = false;
+    _apMaxConn = 4;
+    _apLocalIP = IPAddress(192, 168, 4, 1);
+    _apGatewayIP = IPAddress(192, 168, 4, 1);
+    _apSubnetMask = IPAddress(255, 255, 255, 0);
+
     if (wifioff) {
-        _mode = (_mode == WIFI_AP_STA) ? WIFI_STA : WIFI_OFF;
+        // Turn the radio fully off, dropping STA as well.
+        _mode = WIFI_OFF;
+        _status = WL_DISCONNECTED;
     } else {
+        // Drop only the AP bit, keeping STA active if it was running.
         _mode = (_mode == WIFI_AP_STA) ? WIFI_STA : WIFI_OFF;
     }
     return true;
@@ -644,33 +595,29 @@ bool WiFiClass::enableAP(bool enable, bool persistent) {
 
 int8_t WiFiClass::scanNetworks(bool async, bool show_hidden, bool passive, uint32_t max_ms_per_chan) {
     (void)passive;
-    // Treat 0 as "unspecified" and complete on the next scanComplete() call.
+    // Treat 0 as "unspecified" and default to a short, deterministic delay.
     const uint32_t scanDelayMs = (max_ms_per_chan == 0) ? 1 : max_ms_per_chan;
 
     if (_scanInProgress) {
         return WIFI_SCAN_RUNNING;
     }
 
-    int8_t count = 0;
+    // Build the visible snapshot the indexed accessors read from, filtering
+    // hidden entries unless show_hidden was requested.
+    _scanView.clear();
     for (const auto& e : _scanResults) {
         if (!e.isHidden || show_hidden) {
-            count++;
+            _scanView.push_back(e);
         }
     }
-
-    _scanResultCount = count;
-    _scanHasResult = false;
+    _scanResultCount = static_cast<int8_t>(_scanView.size());
 
     if (async) {
-        (void)scanDelayMs;
-        _scanInProgress = false;
-        _scanHasResult = true;
-        _scanReadyAt = 0;
-
-        arduino_event_info_t info = {};
-        info.wifi_scan_done.number = static_cast<uint32_t>(_scanResultCount);
-        _emitEvent(ARDUINO_EVENT_WIFI_SCAN_DONE, info);
-
+        // Schedule completion; scanComplete() observes the running -> done
+        // transition and emits ARDUINO_EVENT_WIFI_SCAN_DONE at that point.
+        _scanInProgress = true;
+        _scanHasResult = false;
+        _scanReadyAt = millis() + scanDelayMs;
         return WIFI_SCAN_RUNNING;
     }
 
@@ -685,6 +632,11 @@ int8_t WiFiClass::scanComplete() {
         if ((long)(millis() - _scanReadyAt) >= 0) {
             _scanInProgress = false;
             _scanHasResult = true;
+
+            arduino_event_info_t info = {};
+            info.wifi_scan_done.number = static_cast<uint32_t>(_scanResultCount);
+            _emitEvent(ARDUINO_EVENT_WIFI_SCAN_DONE, info);
+
             return _scanResultCount;
         }
         return WIFI_SCAN_RUNNING;
@@ -708,45 +660,48 @@ void WiFiClass::scanDelete() {
 }
 
 String WiFiClass::SSID(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        return _scanResults[networkItem].ssid;
+    if (networkItem < _scanView.size()) {
+        return _scanView[networkItem].ssid;
     }
     return String("");
 }
 
 uint8_t WiFiClass::encryptionType(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        return _scanResults[networkItem].encryptionType;
+    if (networkItem < _scanView.size()) {
+        return _scanView[networkItem].encryptionType;
     }
     return ENC_TYPE_NONE;
 }
 
 int32_t WiFiClass::RSSI(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        return _scanResults[networkItem].rssi;
+    if (networkItem < _scanView.size()) {
+        return _scanView[networkItem].rssi;
     }
     return 0;
 }
 
 uint8_t* WiFiClass::BSSID(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        // Return pointer into the entry – valid for the lifetime of the object
-        return const_cast<uint8_t*>(_scanResults[networkItem].bssid);
+    // Copy into stable per-object storage so the returned pointer stays valid
+    // even if _scanResults/_scanView are later reallocated by a new scan or
+    // a mock injection call.
+    if (networkItem < _scanView.size()) {
+        memcpy(_bssidScratch, _scanView[networkItem].bssid, 6);
+    } else {
+        memset(_bssidScratch, 0, 6);
     }
-    static uint8_t zeroBssid[6] = {0};
-    return zeroBssid;
+    return _bssidScratch;
 }
 
 int32_t WiFiClass::channel(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        return _scanResults[networkItem].channel;
+    if (networkItem < _scanView.size()) {
+        return _scanView[networkItem].channel;
     }
     return 0;
 }
 
 bool WiFiClass::isHidden(uint8_t networkItem) {
-    if (networkItem < _scanResults.size()) {
-        return _scanResults[networkItem].isHidden;
+    if (networkItem < _scanView.size()) {
+        return _scanView[networkItem].isHidden;
     }
     return false;
 }
@@ -868,6 +823,10 @@ void WiFiClass::mockReset() {
     _apGatewayIP = IPAddress(192, 168, 4, 1);
     _apSubnetMask = IPAddress(255, 255, 255, 0);
     _flappyCounter = 0;
+    _scanInProgress = false;
+    _scanHasResult = false;
+    _scanReadyAt = 0;
+    _scanResultCount = 0;
     _initDefaultScanResults();
 }
 #endif
@@ -899,14 +858,17 @@ void WiFiClass::waitForConnectResult() {
 }
 
 bool WiFiClass::getNetworkInfo(uint8_t i, String &ssid, uint8_t &encType, int32_t &rssi, uint8_t* &bssid, int32_t &channel, bool &isHidden) {
-    if (i >= _scanResults.size()) {
+    if (i >= _scanView.size()) {
         return false;
     }
-    const MockScanEntry& e = _scanResults[i];
+    const MockScanEntry& e = _scanView[i];
     ssid = e.ssid;
     encType = e.encryptionType;
     rssi = e.rssi;
-    bssid = const_cast<uint8_t*>(e.bssid);
+    // Copy into stable per-object storage to avoid handing back a pointer into
+    // vector element storage that a later scan/injection could invalidate.
+    memcpy(_bssidScratch, e.bssid, 6);
+    bssid = _bssidScratch;
     channel = e.channel;
     isHidden = e.isHidden;
     return true;

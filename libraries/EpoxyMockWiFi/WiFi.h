@@ -40,16 +40,6 @@
 #define EPX_SSID_FLAPPY   "EPX_FLAPPY"
 /** Hidden network: connectable by exact SSID; omitted from default scans. */
 #define EPX_SSID_HIDDEN   "EPX_HIDDEN"
-/** Connect succeeds; advertised as OPEN (no auth). */
-#define EPX_SSID_OPEN     "EPX_OPEN"
-/** Connect succeeds; advertised as WEP auth. */
-#define EPX_SSID_WEP      "EPX_WEP"
-/** Connect succeeds; advertised as WPA-PSK auth. */
-#define EPX_SSID_WPA      "EPX_WPA"
-/** Connect succeeds; advertised as WPA2-PSK auth. */
-#define EPX_SSID_WPA2     "EPX_WPA2"
-/** Connect succeeds; advertised as WPA3-PSK auth. */
-#define EPX_SSID_WPA3     "EPX_WPA3"
 
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)
@@ -161,8 +151,10 @@ typedef enum {
     WIFI_EVENT_SOFTAPMODE_PROBEREQRECVED,
     WIFI_EVENT_MAX, 
     ARDUINO_EVENT_MAX = WIFI_EVENT_MAX
-#elif defined(ESP32)
-    // ESP32 Arduino ARDUINO_EVENT_* values (placed in a higher range to avoid clashes)
+#else
+    // ESP32 Arduino ARDUINO_EVENT_* values. Also used as the generic
+    // EpoxyDuino fallback so the full event set (e.g. ARDUINO_EVENT_WIFI_SCAN_DONE,
+    // ARDUINO_EVENT_WIFI_STA_CONNECTED, ARDUINO_EVENT_WIFI_STA_GOT_IP) is always defined.
     ARDUINO_EVENT_WIFI_READY = 0,
     ARDUINO_EVENT_WIFI_SCAN_DONE,
     ARDUINO_EVENT_WIFI_STA_START,
@@ -208,9 +200,6 @@ typedef enum {
     ARDUINO_EVENT_PROV_CRED_FAIL,
     ARDUINO_EVENT_PROV_CRED_SUCCESS,
     ARDUINO_EVENT_MAX
-#else
-    // Generic / EpoxyDuino fallback – just provide a sentinel value
-    ARDUINO_EVENT_MAX = 0
 #endif
 } WiFiEvent_t;
 
@@ -275,7 +264,9 @@ private:
     IPAddress _apSubnetMask;
 
     // Scan cache
-    std::vector<MockScanEntry> _scanResults;
+    std::vector<MockScanEntry> _scanResults;  // master list (includes hidden)
+    std::vector<MockScanEntry> _scanView;     // snapshot read by indexed accessors
+    uint8_t _bssidScratch[6];                 // stable storage for BSSID() returns
     bool _scanInProgress;
     bool _scanHasResult;
     uint32_t _scanReadyAt;
@@ -680,6 +671,7 @@ public:
      */
     void mockSetScanResults(const std::vector<MockScanEntry>& results) {
         _scanResults = results;
+        _scanView = _scanResults;
     }
 
     /**
@@ -687,6 +679,7 @@ public:
      */
     void mockAddScanResult(const MockScanEntry& entry) {
         _scanResults.push_back(entry);
+        _scanView = _scanResults;
     }
 
     /**
