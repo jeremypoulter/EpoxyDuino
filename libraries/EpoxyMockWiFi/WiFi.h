@@ -40,6 +40,16 @@
 #define EPX_SSID_FLAPPY   "EPX_FLAPPY"
 /** Hidden network: connectable by exact SSID; omitted from default scans. */
 #define EPX_SSID_HIDDEN   "EPX_HIDDEN"
+/** Connect succeeds; advertised as OPEN (no auth). */
+#define EPX_SSID_OPEN     "EPX_OPEN"
+/** Connect succeeds; advertised as WEP auth. */
+#define EPX_SSID_WEP      "EPX_WEP"
+/** Connect succeeds; advertised as WPA-PSK auth. */
+#define EPX_SSID_WPA      "EPX_WPA"
+/** Connect succeeds; advertised as WPA2-PSK auth. */
+#define EPX_SSID_WPA2     "EPX_WPA2"
+/** Connect succeeds; advertised as WPA3-PSK auth. */
+#define EPX_SSID_WPA3     "EPX_WPA3"
 
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)
@@ -58,12 +68,17 @@ typedef enum {
 
 typedef enum {
     WL_NO_SHIELD_UNUSED = 255,
-    WL_SCAN_RUNNING = 254
+    WL_SCAN_RUNNING = -1,
+    WL_SCAN_FAILED = -2
 } wl_scan_status_t;
 
 // ESP32 Arduino compatibility
 #ifndef WIFI_SCAN_RUNNING
 #define WIFI_SCAN_RUNNING WL_SCAN_RUNNING
+#endif
+
+#ifndef WIFI_SCAN_FAILED
+#define WIFI_SCAN_FAILED WL_SCAN_FAILED
 #endif
 
 // Scan/sort method constants used by the firmware. Values are placeholders.
@@ -261,9 +276,21 @@ private:
 
     // Scan cache
     std::vector<MockScanEntry> _scanResults;
+    bool _scanInProgress;
+    bool _scanHasResult;
+    uint32_t _scanReadyAt;
+    int8_t _scanResultCount;
 
     // EPX_FLAPPY attempt counter (0 = no attempts yet)
     int _flappyCounter;
+
+    // Event handlers registered via onEvent().
+    WiFiEventHandler _eventHandler;
+    WiFiEventHandlerInfo _eventHandlerInfo;
+    std::vector<std::pair<WiFiEvent_t, WiFiEventCb>> _eventCallbacks;
+
+    // Dispatch an event to all registered handlers.
+    void _emitEvent(WiFiEvent_t event, const arduino_event_info_t& info);
 
     // Populate scan results with default mock entries.
     void _initDefaultScanResults();
@@ -494,8 +521,8 @@ public:
     /**
      * Called to get the scan state in Async mode
      * @return scan result or status
-     *          -1 if scan not triggered
-     *          -2 if scan not finished
+      *          -1 if scan is still running
+      *          -2 if scan not triggered / no result available
      *          >0 number of found WiFi networks
      */
     int8_t scanComplete();
