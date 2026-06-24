@@ -40,6 +40,16 @@
 #define EPX_SSID_FLAPPY   "EPX_FLAPPY"
 /** Hidden network: connectable by exact SSID; omitted from default scans. */
 #define EPX_SSID_HIDDEN   "EPX_HIDDEN"
+/** Connect succeeds; advertised as OPEN (no auth). */
+#define EPX_SSID_OPEN     "EPX_OPEN"
+/** Connect succeeds; advertised as WEP auth. */
+#define EPX_SSID_WEP      "EPX_WEP"
+/** Connect succeeds; advertised as WPA-PSK auth. */
+#define EPX_SSID_WPA      "EPX_WPA"
+/** Connect succeeds; advertised as WPA2-PSK auth. */
+#define EPX_SSID_WPA2     "EPX_WPA2"
+/** Connect succeeds; advertised as WPA3-PSK auth. */
+#define EPX_SSID_WPA3     "EPX_WPA3"
 
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)

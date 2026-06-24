@@ -104,12 +104,12 @@ void testScanList() {
 
     // Default scan (hidden excluded)
     int8_t n = WiFi.scanNetworks();
-    // 5 visible + 1 hidden; scanNetworks() without show_hidden excludes hidden
-    CHECK(n == 5);
+    // 10 visible + 1 hidden; scanNetworks() without show_hidden excludes hidden
+    CHECK(n == 10);
 
     // Scan including hidden networks
     int8_t nAll = WiFi.scanNetworks(false, true);
-    CHECK(nAll == 6);
+    CHECK(nAll == 11);
 
     // Verify EPX_OK entry (index 0)
     CHECK(WiFi.SSID(0) == EPX_SSID_OK);
@@ -121,7 +121,7 @@ void testScanList() {
     CHECK(bssid0 != nullptr);
     CHECK(bssid0[5] == 0x01);
 
-    // Verify EPX_HIDDEN entry (index 5, last)
+    // Verify EPX_HIDDEN entry (index 5)
     CHECK(WiFi.SSID(5) == EPX_SSID_HIDDEN);
     CHECK(WiFi.isHidden(5) == true);
 

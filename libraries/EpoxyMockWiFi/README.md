@@ -89,6 +89,46 @@ The mock library provides functions to simulate WiFi behavior for testing:
 #endif
 ```
 
+### Mock SSID Constants
+
+To make connection outcomes deterministic in tests, the mock library reacts to
+a set of well-known SSIDs defined in `WiFi.h`. Calling `WiFi.begin()` with one
+of these SSIDs produces a fixed result without touching the network:
+
+| Constant            | SSID value   | `begin()` outcome |
+|---------------------|--------------|-------------------|
+| `EPX_SSID_OK`       | `EPX_OK`     | Connects successfully; `localIP()` returns the host's primary IPv4 address. |
+| `EPX_SSID_BADPASS`  | `EPX_BADPASS`| Fails with `WL_CONNECT_FAILED` (bad password). |
+| `EPX_SSID_TIMEOUT`  | `EPX_TIMEOUT`| Fails with `WL_CONNECTION_LOST` (simulated timeout). |
+| `EPX_SSID_NOIP`     | `EPX_NOIP`   | Reaches `WL_CONNECTED` but `localIP()` stays `0.0.0.0` (no DHCP lease). |
+| `EPX_SSID_FLAPPY`   | `EPX_FLAPPY` | Alternates `WL_CONNECTED` / `WL_CONNECT_FAILED` on successive `begin()` calls. |
+| `EPX_SSID_HIDDEN`   | `EPX_HIDDEN` | Connects by exact SSID; omitted from default scan results. |
+| `EPX_SSID_OPEN`     | `EPX_OPEN`   | Connects successfully; advertised in scans as `WIFI_AUTH_OPEN`. |
+| `EPX_SSID_WEP`      | `EPX_WEP`    | Connects successfully; advertised in scans as `WIFI_AUTH_WEP`. |
+| `EPX_SSID_WPA`      | `EPX_WPA`    | Connects successfully; advertised in scans as `WIFI_AUTH_WPA_PSK`. |
+| `EPX_SSID_WPA2`     | `EPX_WPA2`   | Connects successfully; advertised in scans as `WIFI_AUTH_WPA2_PSK`. |
+| `EPX_SSID_WPA3`     | `EPX_WPA3`   | Connects successfully; advertised in scans as `WIFI_AUTH_WPA3_PSK`. |
+
+The auth-mode SSIDs (`EPX_SSID_OPEN`, `EPX_SSID_WEP`, `EPX_SSID_WPA`,
+`EPX_SSID_WPA2`, `EPX_SSID_WPA3`) all connect successfully but advertise a
+specific `encryptionType` in the default scan results, so tests can exercise
+code that branches on the network's authentication mode:
+
+```C++
+#if defined(EPOXY_DUINO)
+  // Connect to a mock WPA3 network
+  WiFi.begin(EPX_SSID_WPA3, "anypassword");
+
+  // Inspect the advertised auth mode from a scan
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) {
+    if (WiFi.SSID(i) == EPX_SSID_OPEN) {
+      // WiFi.encryptionType(i) == WIFI_AUTH_OPEN
+    }
+  }
+#endif
+```
+
 ## Limitations
 
 This is a mock library for compilation testing. It does not:

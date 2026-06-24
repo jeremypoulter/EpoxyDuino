@@ -157,6 +157,66 @@ void WiFiClass::_initDefaultScanResults() {
         e.isHidden = true;
         _scanResults.push_back(e);
     }
+    // EPX_OPEN – open auth network
+    {
+        MockScanEntry e;
+        e.ssid = EPX_SSID_OPEN;
+        e.rssi = -52;
+        e.encryptionType = WIFI_AUTH_OPEN;
+        e.channel = 4;
+        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
+        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x07;
+        e.isHidden = false;
+        _scanResults.push_back(e);
+    }
+    // EPX_WEP – WEP auth network
+    {
+        MockScanEntry e;
+        e.ssid = EPX_SSID_WEP;
+        e.rssi = -67;
+        e.encryptionType = WIFI_AUTH_WEP;
+        e.channel = 2;
+        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
+        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x08;
+        e.isHidden = false;
+        _scanResults.push_back(e);
+    }
+    // EPX_WPA – WPA-PSK auth network
+    {
+        MockScanEntry e;
+        e.ssid = EPX_SSID_WPA;
+        e.rssi = -59;
+        e.encryptionType = WIFI_AUTH_WPA_PSK;
+        e.channel = 8;
+        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
+        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x09;
+        e.isHidden = false;
+        _scanResults.push_back(e);
+    }
+    // EPX_WPA2 – WPA2-PSK auth network
+    {
+        MockScanEntry e;
+        e.ssid = EPX_SSID_WPA2;
+        e.rssi = -50;
+        e.encryptionType = WIFI_AUTH_WPA2_PSK;
+        e.channel = 6;
+        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
+        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x0A;
+        e.isHidden = false;
+        _scanResults.push_back(e);
+    }
+    // EPX_WPA3 – WPA3-PSK auth network
+    {
+        MockScanEntry e;
+        e.ssid = EPX_SSID_WPA3;
+        e.rssi = -61;
+        e.encryptionType = WIFI_AUTH_WPA3_PSK;
+        e.channel = 10;
+        e.bssid[0] = 0xAA; e.bssid[1] = 0xBB; e.bssid[2] = 0xCC;
+        e.bssid[3] = 0x00; e.bssid[4] = 0x00; e.bssid[5] = 0x0B;
+        e.isHidden = false;
+        _scanResults.push_back(e);
+    }
 
     _scanView = _scanResults;
 }
@@ -256,6 +316,18 @@ wl_status_t WiFiClass::begin(const char* ssid, const char *passphrase) {
         }
     } else if (_ssid == EPX_SSID_HIDDEN) {
         // Hidden network – connectable by exact SSID
+        _status = WL_CONNECTED;
+        _localIP = successIP;
+        if (!_staticIPConfigured) {
+            _gatewayIP = IPAddress(0, 0, 0, 0);
+            _dnsIP = IPAddress(0, 0, 0, 0);
+        }
+    } else if (_ssid == EPX_SSID_OPEN ||
+               _ssid == EPX_SSID_WEP ||
+               _ssid == EPX_SSID_WPA ||
+               _ssid == EPX_SSID_WPA2 ||
+               _ssid == EPX_SSID_WPA3) {
+        // Auth-mode specific deterministic success SSIDs.
         _status = WL_CONNECTED;
         _localIP = successIP;
         if (!_staticIPConfigured) {
