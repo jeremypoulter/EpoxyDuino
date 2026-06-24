@@ -286,12 +286,34 @@ private:
     int _flappyCounter;
 
     // Event handlers registered via onEvent().
+    struct PendingWiFiEvent {
+        WiFiEvent_t event;
+        arduino_event_info_t info;
+        uint32_t dueAt;
+    };
+
     WiFiEventHandler _eventHandler;
     WiFiEventHandlerInfo _eventHandlerInfo;
     std::vector<std::pair<WiFiEvent_t, WiFiEventCb>> _eventCallbacks;
+    std::vector<PendingWiFiEvent> _pendingEvents;
+    bool _yieldServiceRegistered;
+    bool _staStarted;
+    bool _apStarted;
 
     // Dispatch an event to all registered handlers.
     void _emitEvent(WiFiEvent_t event, const arduino_event_info_t& info);
+
+    // Queue an event for asynchronous dispatch from yield().
+    void _queueEvent(WiFiEvent_t event, const arduino_event_info_t& info, uint32_t delayMs = 0);
+
+    // Flush queued events from the async service callback.
+    void _servicePendingEvents();
+
+    // Progress an async scan and emit SCAN_DONE when the scheduled time arrives.
+    void _serviceAsyncScan();
+
+    // Static adapter for epoxyRegisterYieldServiceCallback().
+    static void _yieldServiceCallback(void* context);
 
     // Populate scan results with default mock entries.
     void _initDefaultScanResults();

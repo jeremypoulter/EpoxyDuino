@@ -32,8 +32,71 @@ bool epoxy_real_time = true;
 static uint32_t digitalReadPinValues = 0;
 static uint32_t digitalWritePinValues = 0;
 
+namespace {
+
+constexpr uint8_t kMaxYieldServiceCallbacks = 16;
+
+struct YieldServiceEntry {
+  epoxy_yield_service_callback_t callback;
+  void* context;
+};
+
+YieldServiceEntry yieldServiceEntries[kMaxYieldServiceCallbacks] = {};
+
+void serviceYieldCallbacks() {
+  for (uint8_t i = 0; i < kMaxYieldServiceCallbacks; ++i) {
+    if (yieldServiceEntries[i].callback != nullptr) {
+      yieldServiceEntries[i].callback(yieldServiceEntries[i].context);
+    }
+  }
+}
+
+} // namespace
+
 void yield() {
+  checkInterrupts();
+  serviceYieldCallbacks();
   usleep(1000); // prevents program from consuming 100% CPU
+}
+
+bool epoxyRegisterYieldServiceCallback(
+    epoxy_yield_service_callback_t callback,
+    void* context) {
+  if (callback == nullptr) {
+    return false;
+  }
+
+  for (uint8_t i = 0; i < kMaxYieldServiceCallbacks; ++i) {
+    if (yieldServiceEntries[i].callback == callback &&
+        yieldServiceEntries[i].context == context) {
+      return true;
+    }
+  }
+
+  for (uint8_t i = 0; i < kMaxYieldServiceCallbacks; ++i) {
+    if (yieldServiceEntries[i].callback == nullptr) {
+      yieldServiceEntries[i].callback = callback;
+      yieldServiceEntries[i].context = context;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool epoxyUnregisterYieldServiceCallback(
+    epoxy_yield_service_callback_t callback,
+    void* context) {
+  for (uint8_t i = 0; i < kMaxYieldServiceCallbacks; ++i) {
+    if (yieldServiceEntries[i].callback == callback &&
+        yieldServiceEntries[i].context == context) {
+      yieldServiceEntries[i].callback = nullptr;
+      yieldServiceEntries[i].context = nullptr;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void pinMode(uint8_t /*pin*/, uint8_t /*mode*/) {}

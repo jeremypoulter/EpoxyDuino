@@ -299,6 +299,27 @@ void checkInterrupts();
  */
 void triggerInterrupt(uint8_t interruptNum);
 
+/**
+ * EpoxyDuino-only hook for registering lightweight background service
+ * callbacks that run from yield().
+ */
+typedef void (*epoxy_yield_service_callback_t)(void* context);
+
+/**
+ * Register a callback invoked from yield(). Returns false if callback is null
+ * or the callback table is full.
+ */
+bool epoxyRegisterYieldServiceCallback(
+  epoxy_yield_service_callback_t callback,
+  void* context);
+
+/**
+ * Unregister a previously registered yield service callback.
+ */
+bool epoxyUnregisterYieldServiceCallback(
+  epoxy_yield_service_callback_t callback,
+  void* context);
+
 
 /** Provided in the client code's *.ino file. */
 void setup();
