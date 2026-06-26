@@ -20,8 +20,36 @@
 #include <IPAddress.h>
 #include <Print.h>
 #include <functional>
+#include <vector>
 
 #include "arduino_event_shim.h"  // For arduino_event_info_t
+
+//-----------------------------------------------------------------------------
+// Mock SSID constants for deterministic connect-outcome testing
+//-----------------------------------------------------------------------------
+
+/** Connect succeeds; localIP() returns host's primary IPv4 address. */
+#define EPX_SSID_OK       "EPX_OK"
+/** Connect fails with WL_CONNECT_FAILED (bad password). */
+#define EPX_SSID_BADPASS  "EPX_BADPASS"
+/** Connect fails with WL_CONNECTION_LOST (simulated timeout). */
+#define EPX_SSID_TIMEOUT  "EPX_TIMEOUT"
+/** Connect transitions to WL_CONNECTED but localIP() returns 0.0.0.0. */
+#define EPX_SSID_NOIP     "EPX_NOIP"
+/** Alternates WL_CONNECTED / WL_CONNECT_FAILED on successive begin() calls. */
+#define EPX_SSID_FLAPPY   "EPX_FLAPPY"
+/** Hidden network: connectable by exact SSID; omitted from default scans. */
+#define EPX_SSID_HIDDEN   "EPX_HIDDEN"
+/** Connect succeeds; advertised as OPEN (no auth). */
+#define EPX_SSID_OPEN     "EPX_OPEN"
+/** Connect succeeds; advertised as WEP auth. */
+#define EPX_SSID_WEP      "EPX_WEP"
+/** Connect succeeds; advertised as WPA-PSK auth. */
+#define EPX_SSID_WPA      "EPX_WPA"
+/** Connect succeeds; advertised as WPA2-PSK auth. */
+#define EPX_SSID_WPA2     "EPX_WPA2"
+/** Connect succeeds; advertised as WPA3-PSK auth. */
+#define EPX_SSID_WPA3     "EPX_WPA3"
 
 //-----------------------------------------------------------------------------
 // WiFi Status Codes (common across platforms)
@@ -40,12 +68,17 @@ typedef enum {
 
 typedef enum {
     WL_NO_SHIELD_UNUSED = 255,
-    WL_SCAN_RUNNING = 254
+    WL_SCAN_RUNNING = -1,
+    WL_SCAN_FAILED = -2
 } wl_scan_status_t;
 
 // ESP32 Arduino compatibility
 #ifndef WIFI_SCAN_RUNNING
 #define WIFI_SCAN_RUNNING WL_SCAN_RUNNING
+#endif
+
+#ifndef WIFI_SCAN_FAILED
+#define WIFI_SCAN_FAILED WL_SCAN_FAILED
 #endif
 
 // Scan/sort method constants used by the firmware. Values are placeholders.
@@ -128,8 +161,10 @@ typedef enum {
     WIFI_EVENT_SOFTAPMODE_PROBEREQRECVED,
     WIFI_EVENT_MAX, 
     ARDUINO_EVENT_MAX = WIFI_EVENT_MAX
-#elif defined(ESP32)
-    // ESP32 Arduino ARDUINO_EVENT_* values (placed in a higher range to avoid clashes)
+#else
+    // ESP32 Arduino ARDUINO_EVENT_* values. Also used as the generic
+    // EpoxyDuino fallback so the full event set (e.g. ARDUINO_EVENT_WIFI_SCAN_DONE,
+    // ARDUINO_EVENT_WIFI_STA_CONNECTED, ARDUINO_EVENT_WIFI_STA_GOT_IP) is always defined.
     ARDUINO_EVENT_WIFI_READY = 0,
     ARDUINO_EVENT_WIFI_SCAN_DONE,
     ARDUINO_EVENT_WIFI_STA_START,
@@ -197,14 +232,28 @@ class WiFiServer;
 // WiFiClass - Main WiFi control class
 //-----------------------------------------------------------------------------
 
+/**
+ * A single entry in the mock network scan result list.
+ */
+struct MockScanEntry {
+    String ssid;
+    int32_t rssi;
+    uint8_t encryptionType;  // wifi_auth_mode_t value
+    int32_t channel;
+    uint8_t bssid[6];
+    bool isHidden;
+};
+
 class WiFiClass {
 private:
+    // STA state
     wl_status_t _status;
     WiFiMode_t _mode;
     IPAddress _localIP;
     IPAddress _subnetMask;
     IPAddress _gatewayIP;
     IPAddress _dnsIP;
+    bool _staticIPConfigured;  // true when config() has been called
     String _ssid;
     String _psk;
     String _hostname;
@@ -212,6 +261,66 @@ private:
     uint8_t _macAddress[6];
     bool _autoConnect;
     bool _persistent;
+
+    // AP state (kept separate from STA so both can be active simultaneously)
+    bool _apEnabled;
+    String _apSsid;
+    String _apPsk;
+    int _apChannel;
+    bool _apHidden;
+    int _apMaxConn;
+    IPAddress _apLocalIP;
+    IPAddress _apGatewayIP;
+    IPAddress _apSubnetMask;
+
+    // Scan cache
+    std::vector<MockScanEntry> _scanResults;  // master list (includes hidden)
+    std::vector<MockScanEntry> _scanView;     // snapshot read by indexed accessors
+    uint8_t _bssidScratch[6];                 // stable storage for BSSID() returns
+    bool _scanInProgress;
+    bool _scanHasResult;
+    uint32_t _scanReadyAt;
+    int8_t _scanResultCount;
+
+    // EPX_FLAPPY attempt counter (0 = no attempts yet)
+    int _flappyCounter;
+
+    // Event handlers registered via onEvent().
+    struct PendingWiFiEvent {
+        WiFiEvent_t event;
+        arduino_event_info_t info;
+        uint32_t dueAt;
+    };
+
+    WiFiEventHandler _eventHandler;
+    WiFiEventHandlerInfo _eventHandlerInfo;
+    std::vector<std::pair<WiFiEvent_t, WiFiEventCb>> _eventCallbacks;
+    std::vector<PendingWiFiEvent> _pendingEvents;
+    bool _yieldServiceRegistered;
+    bool _staStarted;
+    bool _apStarted;
+
+    // Dispatch an event to all registered handlers.
+    void _emitEvent(WiFiEvent_t event, const arduino_event_info_t& info);
+
+    // Queue an event for asynchronous dispatch from yield().
+    void _queueEvent(WiFiEvent_t event, const arduino_event_info_t& info, uint32_t delayMs = 0);
+
+    // Flush queued events from the async service callback.
+    void _servicePendingEvents();
+
+    // Progress an async scan and emit SCAN_DONE when the scheduled time arrives.
+    void _serviceAsyncScan();
+
+    // Static adapter for epoxyRegisterYieldServiceCallback().
+    static void _yieldServiceCallback(void* context);
+
+    // Populate scan results with default mock entries.
+    void _initDefaultScanResults();
+
+    // Resolve the host machine's primary non-loopback IPv4 address.
+    // Returns 127.0.0.1 if resolution fails.
+    static IPAddress _getHostIPv4();
 
 public:
     WiFiClass();
@@ -372,6 +481,11 @@ public:
     bool softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet);
 
     /**
+     * Get the SSID of the current AP
+     */
+    String softAPSSID() const;
+
+    /**
      * Get AP IP address
      */
     IPAddress softAPIP();
@@ -430,8 +544,8 @@ public:
     /**
      * Called to get the scan state in Async mode
      * @return scan result or status
-     *          -1 if scan not triggered
-     *          -2 if scan not finished
+      *          -1 if scan is still running
+      *          -2 if scan not triggered / no result available
      *          >0 number of found WiFi networks
      */
     int8_t scanComplete();
@@ -582,6 +696,28 @@ public:
     void mockSetLocalIP(IPAddress ip) { _localIP = ip; }
     void mockSetSSID(const String& ssid) { _ssid = ssid; }
     void mockSetRSSI(int8_t rssi) { (void)rssi; }  // Could store if needed
+
+    /**
+     * Replace the entire scan result list with a custom list.
+     * Pass an empty vector to clear all entries.
+     */
+    void mockSetScanResults(const std::vector<MockScanEntry>& results) {
+        _scanResults = results;
+        _scanView = _scanResults;
+    }
+
+    /**
+     * Append a single entry to the scan result list.
+     */
+    void mockAddScanResult(const MockScanEntry& entry) {
+        _scanResults.push_back(entry);
+        _scanView = _scanResults;
+    }
+
+    /**
+     * Restore all state to construction defaults and repopulate the
+     * default mock scan list.
+     */
     void mockReset();
 #endif
 
