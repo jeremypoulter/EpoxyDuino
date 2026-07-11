@@ -32,6 +32,12 @@ String::String(const char *cstr)
 	if (cstr) copy(cstr, strlen(cstr));
 }
 
+String::String(const char *cstr, unsigned int length)
+{
+	init();
+	if (cstr) copy(cstr, length);
+}
+
 String::String(const String &value)
 {
 	init();
@@ -175,7 +181,8 @@ String & String::copy(const char *cstr, unsigned int length)
 		return *this;
 	}
 	len = length;
-	strcpy(buffer, cstr);
+	memcpy(buffer, cstr, length);
+	buffer[length] = '\0';
 	return *this;
 }
 
@@ -267,8 +274,9 @@ unsigned char String::concat(const char *cstr, unsigned int length)
 	if (!cstr) return 0;
 	if (length == 0) return 1;
 	if (!reserve(newlen)) return 0;
-	strcpy(buffer + len, cstr);
+	memcpy(buffer + len, cstr, length);
 	len = newlen;
+	buffer[len] = '\0';
 	return 1;
 }
 
