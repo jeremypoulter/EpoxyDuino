@@ -136,34 +136,41 @@ static void resolve_callback(
       char addr_str[AVAHI_ADDRESS_STR_MAX];
       avahi_address_snprint(addr_str, sizeof(addr_str), address);
       
-      // Parse IP address
+      // Preserve a discovered service even when it only resolves to a hostname
+      // (or IPv6) so higher layers can still track peers by instance/host.
+      MDNSService service;
+      service.instance_name = name ? String(name) : String("");
+      service.hostname = host_name ? String(host_name) : String("");
+      service.port = port;
+
+      // Parse IPv4 address when available.
       uint8_t a, b, c, d;
       if (sscanf(addr_str, "%hhu.%hhu.%hhu.%hhu", &a, &b, &c, &d) == 4) {
-        IPAddress ip(a, b, c, d);
-        String hostname = String(host_name);
-        
-        // Add to query results
-        MDNSService service(hostname, ip, port);
-        
-        // Process TXT records
-        AvahiStringList* tl = txt;
-        while (tl) {
-          char* key_value = avahi_string_list_to_string(tl);
-          if (key_value) {
-            char* eq = strchr(key_value, '=');
-            if (eq) {
-              *eq = '\0';
-              String key = String(key_value);
-              String value = String(eq + 1);
-              service.txt_records[key] = value;
-            }
-            avahi_free(key_value);
-          }
-          tl = avahi_string_list_get_next(tl);
-        }
-        
-        ctx->mdns->_queryResults.push_back(service);
+        service.ip = IPAddress(a, b, c, d);
       }
+
+      // Process TXT records
+      AvahiStringList* tl = txt;
+      while (tl) {
+        char* key = nullptr;
+        char* value = nullptr;
+        size_t value_size = 0;
+        if (avahi_string_list_get_pair(tl, &key, &value, &value_size) == 0 && key) {
+          String keyStr = String(key);
+          String valueStr = value ? String(value) : String("");
+          service.txt_records[keyStr] = valueStr;
+        }
+
+        if (key) {
+          avahi_free(key);
+        }
+        if (value) {
+          avahi_free(value);
+        }
+        tl = avahi_string_list_get_next(tl);
+      }
+
+      ctx->mdns->_queryResults.push_back(service);
       break;
     }
     case AVAHI_RESOLVER_FAILURE:
@@ -409,47 +416,10 @@ bool MDNSResponder::_publishService(const char* name, const char* service,
   service_type += "._";
   service_type += proto;
 
-  // Use the configured mDNS host target when available; nullptr makes Avahi
-  // fall back to the system hostname.
-  String host_target = _hostname;
-  if (host_target.length() > 0 && !host_target.endsWith(".local")) {
-    host_target += ".local";
-  }
-  const char* avahi_host = host_target.length() > 0 ? host_target.c_str() : nullptr;
-
-  // Register address records for the custom hostname so that service
-  // resolution succeeds.  Without this, resolvers cannot turn the hostname
-  // in the SRV record into an IP address and silently drop the service.
-  if (avahi_host) {
-    struct ifaddrs *ifaddr, *ifa;
-    if (getifaddrs(&ifaddr) == 0) {
-      for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr) continue;
-        if (ifa->ifa_flags & IFF_LOOPBACK) continue;
-        if (!(ifa->ifa_flags & IFF_UP)) continue;
-
-        if (ifa->ifa_addr->sa_family == AF_INET) {
-          struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
-          AvahiAddress addr;
-          addr.proto = AVAHI_PROTO_INET;
-          addr.data.ipv4.address = sin->sin_addr.s_addr;
-
-          int addr_ret = avahi_entry_group_add_address(
-              _avahi_entry_group,
-              AVAHI_IF_UNSPEC,
-              AVAHI_PROTO_INET,
-              (AvahiPublishFlags)0,
-              avahi_host,
-              &addr);
-          if (addr_ret < 0 && addr_ret != AVAHI_ERR_COLLISION) {
-            std::cerr << "Failed to add address record for " << avahi_host
-                      << ": " << avahi_strerror(addr_ret) << std::endl;
-          }
-        }
-      }
-      freeifaddrs(ifaddr);
-    }
-  }
+  // Use Avahi's daemon-managed host target for native services. Instance names
+  // still carry per-device identity (e.g. openevse-ev0), while this avoids SRV
+  // targets that may not have stable A/AAAA records on multi-interface hosts.
+  const char* avahi_host = nullptr;
 
   // Build TXT records using AvahiStringList
   AvahiStringList* txt_list = nullptr;
@@ -800,6 +770,9 @@ mdns_search_once_t* MDNSResponder::beginAsyncQuery(const char* service, const ch
   _activeAsyncQueries[(mdns_search_once_t*)handle] = std::vector<MDNSService>();
   _queryStartTimes[(mdns_search_once_t*)handle] = millis();
   _queryTimeouts[(mdns_search_once_t*)handle] = timeout_ms;
+
+  // Clear previous browse results so this query consumes only fresh resolver callbacks.
+  _queryResults.clear();
   
   // Start the browse operation immediately
   _browseService(service, proto, timeout_ms);
@@ -837,7 +810,7 @@ bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result
   
   if (isComplete) {
     // Convert stored MDNSService results to mdns_result_t linked list
-    std::vector<MDNSService>& services = it->second;
+    std::vector<MDNSService>& services = _queryResults;
     
     if (services.empty()) {
       *results = nullptr;
@@ -858,6 +831,14 @@ bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result
       result->hostname = (char*)malloc(svc.hostname.length() + 1);
       if (result->hostname) {
         strcpy(result->hostname, svc.hostname.c_str());
+      }
+
+      // Copy instance name when available.
+      if (svc.instance_name.length() > 0) {
+        result->instance_name = (char*)malloc(svc.instance_name.length() + 1);
+        if (result->instance_name) {
+          strcpy(result->instance_name, svc.instance_name.c_str());
+        }
       }
       
       // Copy IP address

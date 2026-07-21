@@ -45,6 +45,7 @@ struct AvahiSimplePoll;
  */
 class MDNSService {
 public:
+  String instance_name;
   String hostname;
   IPAddress ip;
   uint16_t port;
