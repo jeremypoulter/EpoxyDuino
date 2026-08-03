@@ -54,7 +54,7 @@ void printResultInfo(mdns_result_t* result) {
   if (result->addr) {
     Serial.print("      IP: ");
     // Simple IPv4 display
-    uint32_t ip = result->addr->u_addr.addr;
+    uint32_t ip = result->addr->addr.u_addr.ip4.addr;
     Serial.print((ip & 0xFF));
     Serial.print(".");
     Serial.print((ip >> 8) & 0xFF);
@@ -89,8 +89,8 @@ void startAsyncSearch() {
   }
   
   Serial.println("\n--- Starting search for _openevse._tcp services ---");
-  Serial.println("Calling mdns_query_async_start...");
-  
+  Serial.println("Calling mdns_query_async_new...");
+
   // Start an async query
   // Parameters:
   //   - name: NULL (search for all instances)
@@ -100,7 +100,7 @@ void startAsyncSearch() {
   //   - timeout_ms: 2000 (2 second query timeout)
   //   - max_results: 10 (collect up to 10 results)
   //   - notifier: NULL (no callback, we'll poll instead)
-  activeSearch = mdns_query_async_start(
+  activeSearch = mdns_query_async_new(
       NULL,
       "openevse",
       "tcp",
@@ -126,14 +126,15 @@ void queryAsyncStatus() {
   }
   
   mdns_result_t* results = nullptr;
-  
-  // Poll for results with 100ms timeout
+
+  // Poll without blocking: the search advances in the background from yield(),
+  // so a zero timeout is enough to pick up whatever has arrived so far.
   bool isComplete = mdns_query_async_get_results(
       activeSearch,
-      &results,
-      100  // 100ms polling timeout
+      0,  // non-blocking poll
+      &results
   );
-  
+
   if (isComplete) {
     unsigned long elapsed = millis() - queryStartTime;
     
