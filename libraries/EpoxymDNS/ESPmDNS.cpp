@@ -19,6 +19,7 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 // Global MDNS instance
 MDNSResponder MDNS;
@@ -27,6 +28,61 @@ MDNSResponder MDNS;
 struct AvahiBrowseContext {
   MDNSResponder* mdns;
   AvahiSimplePoll* simple_poll;
+};
+
+/**
+ * @brief State for a single in-flight async query.
+ *
+ * ESP-IDF runs mDNS in its own task, so a search progresses whether or not the
+ * application polls it. Native builds have no such task, so each search keeps
+ * its own browser and collects results from the shared Avahi poll, which is
+ * pumped non-blockingly from yield().
+ */
+struct EpoxyMdnsAsyncSearch {
+  MDNSResponder* mdns = nullptr;
+  AvahiServiceBrowser* browser = nullptr;
+  std::vector<MDNSService> results;
+
+  // Avahi signals ALL_FOR_NOW once it has flushed everything it knows about,
+  // but resolvers for those services may still be outstanding.
+  bool all_for_now = false;
+  int outstanding_resolvers = 0;
+  bool failed = false;
+  bool notified = false;
+
+  uint32_t start_ms = 0;
+  uint32_t timeout_ms = 0;
+  size_t max_results = 0;  // 0 means unlimited
+  mdns_query_notify_t notifier = nullptr;
+  mdns_search_once_t* handle = nullptr;
+
+  /**
+   * Collapse the per-interface/per-protocol duplicates Avahi reports into one
+   * entry per service, matching what ESP-IDF hands back.
+   */
+  void addResult(const MDNSService& service) {
+    for (auto& existing : results) {
+      if (existing.instance_name == service.instance_name &&
+          existing.hostname == service.hostname &&
+          existing.port == service.port) {
+        // Prefer an entry that carries a usable address.
+        if (existing.ip == IPAddress(0, 0, 0, 0)) {
+          existing.ip = service.ip;
+        }
+        for (const auto& txt : service.txt_records) {
+          if (existing.txt_records.find(txt.first) == existing.txt_records.end()) {
+            existing.txt_records[txt.first] = txt.second;
+          }
+        }
+        return;
+      }
+    }
+
+    if (max_results > 0 && results.size() >= max_results) {
+      return;
+    }
+    results.push_back(service);
+  }
 };
 
 // Forward declarations for callbacks
@@ -183,6 +239,144 @@ static void resolve_callback(
   if (r) avahi_service_resolver_free(r);
 }
 
+//-----------------------------------------------------------------------------
+// Async query callbacks
+//
+// Separate from the synchronous browse callbacks above because these accumulate
+// into a specific EpoxyMdnsAsyncSearch rather than the shared _queryResults.
+//-----------------------------------------------------------------------------
+
+static MDNSService serviceFromResolve(
+    const char* name,
+    const char* host_name,
+    const AvahiAddress* address,
+    uint16_t port,
+    AvahiStringList* txt) {
+
+  MDNSService service;
+  service.instance_name = name ? String(name) : String("");
+  service.hostname = host_name ? String(host_name) : String("");
+  service.port = port;
+
+  if (address) {
+    char addr_str[AVAHI_ADDRESS_STR_MAX];
+    avahi_address_snprint(addr_str, sizeof(addr_str), address);
+    uint8_t a, b, c, d;
+    if (sscanf(addr_str, "%hhu.%hhu.%hhu.%hhu", &a, &b, &c, &d) == 4) {
+      service.ip = IPAddress(a, b, c, d);
+    }
+  }
+
+  AvahiStringList* tl = txt;
+  while (tl) {
+    char* key = nullptr;
+    char* value = nullptr;
+    size_t value_size = 0;
+    if (avahi_string_list_get_pair(tl, &key, &value, &value_size) == 0 && key) {
+      service.txt_records[String(key)] = value ? String(value) : String("");
+    }
+    if (key) {
+      avahi_free(key);
+    }
+    if (value) {
+      avahi_free(value);
+    }
+    tl = avahi_string_list_get_next(tl);
+  }
+
+  return service;
+}
+
+static void async_resolve_callback(
+    AvahiServiceResolver* r,
+    AvahiIfIndex interface,
+    AvahiProtocol protocol,
+    AvahiResolverEvent event,
+    const char* name,
+    const char* type,
+    const char* domain,
+    const char* host_name,
+    const AvahiAddress* address,
+    uint16_t port,
+    AvahiStringList* txt,
+    AvahiLookupResultFlags flags,
+    void* userdata) {
+
+  (void)interface;
+  (void)protocol;
+  (void)type;
+  (void)domain;
+  (void)flags;
+
+  EpoxyMdnsAsyncSearch* search = static_cast<EpoxyMdnsAsyncSearch*>(userdata);
+
+  if (event == AVAHI_RESOLVER_FOUND) {
+    if (search) {
+      search->addResult(serviceFromResolve(name, host_name, address, port, txt));
+    }
+  }
+
+  if (search && search->outstanding_resolvers > 0) {
+    search->outstanding_resolvers--;
+  }
+
+  if (r) {
+    avahi_service_resolver_free(r);
+  }
+}
+
+static void async_browse_callback(
+    AvahiServiceBrowser* b,
+    AvahiIfIndex interface,
+    AvahiProtocol protocol,
+    AvahiBrowserEvent event,
+    const char* name,
+    const char* type,
+    const char* domain,
+    AvahiLookupResultFlags flags,
+    void* userdata) {
+
+  (void)flags;
+
+  EpoxyMdnsAsyncSearch* search = static_cast<EpoxyMdnsAsyncSearch*>(userdata);
+  if (!search) {
+    return;
+  }
+
+  switch (event) {
+    case AVAHI_BROWSER_NEW: {
+      AvahiServiceResolver* resolver = avahi_service_resolver_new(
+          avahi_service_browser_get_client(b),
+          interface,
+          protocol,
+          name,
+          type,
+          domain,
+          AVAHI_PROTO_UNSPEC,
+          (AvahiLookupFlags)0,
+          async_resolve_callback,
+          search);
+
+      if (resolver) {
+        search->outstanding_resolvers++;
+      }
+      break;
+    }
+    case AVAHI_BROWSER_ALL_FOR_NOW:
+      // Everything currently known has been reported. Once the outstanding
+      // resolvers drain, the search is complete.
+      search->all_for_now = true;
+      break;
+    case AVAHI_BROWSER_FAILURE:
+      search->failed = true;
+      search->all_for_now = true;
+      break;
+    case AVAHI_BROWSER_REMOVE:
+    case AVAHI_BROWSER_CACHE_EXHAUSTED:
+      break;
+  }
+}
+
 // Avahi client callback
 static void client_callback(
     AvahiClient* c,
@@ -217,11 +411,13 @@ MDNSResponder::MDNSResponder()
   , _avahi_client(nullptr)
   , _avahi_browser(nullptr)
   , _avahi_entry_group(nullptr)
-  , _avahi_simple_poll(nullptr) {
+  , _avahi_simple_poll(nullptr)
+  , _yieldServiceRegistered(false) {
 }
 
 MDNSResponder::~MDNSResponder() {
   end();
+  _unregisterYieldService();
 }
 
 bool MDNSResponder::begin(const String& hostName) {
@@ -234,6 +430,13 @@ bool MDNSResponder::begin(const String& hostName) {
 }
 
 void MDNSResponder::end() {
+  // In-flight searches own browsers created from _avahi_client, so they must go
+  // before the client is freed.
+  for (auto& entry : _activeAsyncQueries) {
+    _destroySearch(entry.second);
+  }
+  _activeAsyncQueries.clear();
+
   _unpublishService("_http", "_tcp", 0);  // Cleanup any published services
   _cleanupAvahi();
   _hostname = "";
@@ -755,63 +958,219 @@ MDNSService* MDNSResponder::_getResult(int idx) {
 // Async Query Implementation
 //-----------------------------------------------------------------------------
 
+void MDNSResponder::_registerYieldService() {
+#if defined(EPOXY_DUINO)
+  if (_yieldServiceRegistered) {
+    return;
+  }
+
+  _yieldServiceRegistered =
+      epoxyRegisterYieldServiceCallback(MDNSResponder::_yieldServiceCallback, this);
+
+  if (!_yieldServiceRegistered) {
+    // The callback table is full. Async queries would then only advance while
+    // the caller polls, so say so rather than failing silently.
+    std::cerr << "EpoxymDNS: could not register yield service callback; "
+                 "async mDNS queries will only progress while polled"
+              << std::endl;
+  }
+#endif
+}
+
+void MDNSResponder::_unregisterYieldService() {
+#if defined(EPOXY_DUINO)
+  if (!_yieldServiceRegistered) {
+    return;
+  }
+  epoxyUnregisterYieldServiceCallback(MDNSResponder::_yieldServiceCallback, this);
+  _yieldServiceRegistered = false;
+#endif
+}
+
+void MDNSResponder::_yieldServiceCallback(void* context) {
+  MDNSResponder* self = static_cast<MDNSResponder*>(context);
+  if (self) {
+    self->serviceAsyncQueries();
+  }
+}
+
+void MDNSResponder::_pumpAvahi() {
+  if (!_avahi_simple_poll) {
+    return;
+  }
+  // Timeout 0 == non-blocking: dispatch whatever is ready and return.
+  avahi_simple_poll_iterate(_avahi_simple_poll, 0);
+}
+
+bool MDNSResponder::_isSearchComplete(const EpoxyMdnsAsyncSearch* search) const {
+  if (!search) {
+    return false;
+  }
+
+  // Natural completion: Avahi has reported everything it knows and all the
+  // resolvers it triggered have come back.
+  if (search->all_for_now && search->outstanding_resolvers <= 0) {
+    return true;
+  }
+
+  // Hit the max_results ceiling; no point waiting for more.
+  if (search->max_results > 0 && search->results.size() >= search->max_results &&
+      search->outstanding_resolvers <= 0) {
+    return true;
+  }
+
+  // Timeout backstop, for a stalled or absent Avahi daemon.
+  if (search->timeout_ms > 0 &&
+      (uint32_t)(millis() - search->start_ms) >= search->timeout_ms) {
+    return true;
+  }
+
+  return false;
+}
+
+void MDNSResponder::serviceAsyncQueries() {
+  if (_activeAsyncQueries.empty()) {
+    return;
+  }
+
+  _pumpAvahi();
+
+  // Fire completion notifiers once per search.
+  for (auto& entry : _activeAsyncQueries) {
+    EpoxyMdnsAsyncSearch* search = entry.second;
+    if (!search || search->notified) {
+      continue;
+    }
+    if (_isSearchComplete(search)) {
+      search->notified = true;
+      if (search->notifier) {
+        search->notifier(search->handle);
+      }
+    }
+  }
+}
+
+void MDNSResponder::_destroySearch(EpoxyMdnsAsyncSearch* search) {
+  if (!search) {
+    return;
+  }
+  if (search->browser) {
+    avahi_service_browser_free(search->browser);
+    search->browser = nullptr;
+  }
+  delete search;
+}
+
 mdns_search_once_t* MDNSResponder::beginAsyncQuery(const char* service, const char* proto, uint32_t timeout_ms) {
+  return beginAsyncQuery(service, proto, timeout_ms, 0, nullptr);
+}
+
+mdns_search_once_t* MDNSResponder::beginAsyncQuery(const char* service, const char* proto,
+                                                   uint32_t timeout_ms, size_t max_results,
+                                                   mdns_query_notify_t notifier) {
   if (!service || !proto) {
     return nullptr;
   }
-  
-  // Create a new search handle using unique pointer value
-  void* handle = (void*)new uintptr_t(reinterpret_cast<uintptr_t>(this) + _activeAsyncQueries.size());
+
+  if (!_avahi_client && !_initAvahi()) {
+    return nullptr;
+  }
+
+  // Create a unique opaque handle. Use the allocation address so handles stay
+  // unique even as searches are created and destroyed.
+  mdns_search_once_t* handle = (mdns_search_once_t*)new uintptr_t(0);
   if (!handle) {
     return nullptr;
   }
-  
-  // Initialize query state
-  _activeAsyncQueries[(mdns_search_once_t*)handle] = std::vector<MDNSService>();
-  _queryStartTimes[(mdns_search_once_t*)handle] = millis();
-  _queryTimeouts[(mdns_search_once_t*)handle] = timeout_ms;
 
-  // Clear previous browse results so this query consumes only fresh resolver callbacks.
-  _queryResults.clear();
-  
-  // Start the browse operation immediately
-  _browseService(service, proto, timeout_ms);
-  
-  // Copy results to async query storage
-  if (!_queryResults.empty()) {
-    _activeAsyncQueries[(mdns_search_once_t*)handle] = _queryResults;
+  EpoxyMdnsAsyncSearch* search = new EpoxyMdnsAsyncSearch();
+  search->mdns = this;
+  search->start_ms = millis();
+  search->timeout_ms = timeout_ms;
+  search->max_results = max_results;
+  search->notifier = notifier;
+  search->handle = handle;
+
+  // Build service type string (service and proto already carry underscores).
+  String service_type = service;
+  service_type += ".";
+  service_type += proto;
+
+  // Start the browse and return immediately -- ESP-IDF does not block here.
+  // Results accumulate via async_browse_callback as yield() pumps the poll.
+  search->browser = avahi_service_browser_new(
+      _avahi_client,
+      AVAHI_IF_UNSPEC,
+      AVAHI_PROTO_UNSPEC,
+      service_type.c_str(),
+      "local",
+      (AvahiLookupFlags)0,
+      async_browse_callback,
+      search);
+
+  if (!search->browser) {
+    std::cerr << "EpoxymDNS: failed to create service browser for " << service_type.c_str()
+              << ": " << avahi_strerror(avahi_client_errno(_avahi_client)) << std::endl;
+    // Report completion-with-no-results rather than a hard failure, matching
+    // how the ESP-IDF query behaves when nothing answers.
+    search->failed = true;
+    search->all_for_now = true;
   }
-  
-  return (mdns_search_once_t*)handle;
+
+  _activeAsyncQueries[handle] = search;
+  _registerYieldService();
+
+  return handle;
 }
 
 bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result_t** results, uint32_t timeout_ms) {
   if (!search || !results) {
     return false;
   }
-  
+
   // Check if query exists
   auto it = _activeAsyncQueries.find(search);
   if (it == _activeAsyncQueries.end()) {
     return false;
   }
-  
-  // Check if query has timed out
-  uint32_t elapsed = millis() - _queryStartTimes[search];
-  uint32_t queryTimeout = _queryTimeouts[search];
-  bool isComplete = elapsed >= queryTimeout;
-  
-  // If query not complete and no timeout specified, wait
-  if (!isComplete && timeout_ms > 0) {
-    delay(timeout_ms);
-    elapsed = millis() - _queryStartTimes[search];
-    isComplete = elapsed >= queryTimeout;
+
+  EpoxyMdnsAsyncSearch* state = it->second;
+  if (!state) {
+    return false;
   }
-  
+
+  // Pump once so a caller that polls without ever reaching yield() still makes
+  // progress.
+  _pumpAvahi();
+
+  bool isComplete = _isSearchComplete(state);
+
+  // timeout_ms is a bounded budget to wait for completion, not an unconditional
+  // sleep: keep pumping until the search finishes or the budget runs out. This
+  // is what makes a poll cheap -- it returns as soon as Avahi is done.
+  if (!isComplete && timeout_ms > 0) {
+    uint32_t waitStart = millis();
+    while ((uint32_t)(millis() - waitStart) < timeout_ms) {
+      _pumpAvahi();
+      if (_isSearchComplete(state)) {
+        break;
+      }
+      usleep(1000);
+    }
+    isComplete = _isSearchComplete(state);
+  }
+
   if (isComplete) {
+    if (!state->notified) {
+      state->notified = true;
+      if (state->notifier) {
+        state->notifier(state->handle);
+      }
+    }
+
     // Convert stored MDNSService results to mdns_result_t linked list
-    std::vector<MDNSService>& services = _queryResults;
-    
+    std::vector<MDNSService>& services = state->results;
+
     if (services.empty()) {
       *results = nullptr;
       return true;
@@ -898,12 +1257,15 @@ void MDNSResponder::deleteAsyncQuery(mdns_search_once_t* search) {
   if (!search) {
     return;
   }
-  
-  // Remove from tracking maps
-  _activeAsyncQueries.erase(search);
-  _queryStartTimes.erase(search);
-  _queryTimeouts.erase(search);
-  
+
+  auto it = _activeAsyncQueries.find(search);
+  if (it != _activeAsyncQueries.end()) {
+    // Frees the Avahi browser too, so an abandoned query stops generating
+    // callbacks.
+    _destroySearch(it->second);
+    _activeAsyncQueries.erase(it);
+  }
+
   // Free the opaque handle
   delete (uintptr_t*)search;
 }
@@ -939,13 +1301,11 @@ mdns_search_once_t * mdns_query_async_new(
   
   (void)name;        // Unused for now - only PTR queries supported
   (void)type;        // Query type (MDNS_TYPE_*) - for future use
-  (void)max_results; // Unused for now
-  (void)notifier;    // Callback support can be added later
-  
+
   if (!service_type || !proto) {
     return nullptr;
   }
-  
+
   // Build full service type if needed
   String fullServiceType = service_type;
   if (!fullServiceType.startsWith("_")) {
@@ -957,7 +1317,8 @@ mdns_search_once_t * mdns_query_async_new(
     fullProto = "_" + fullProto;
   }
   
-  return MDNS.beginAsyncQuery(fullServiceType.c_str(), fullProto.c_str(), timeout_ms);
+  return MDNS.beginAsyncQuery(fullServiceType.c_str(), fullProto.c_str(), timeout_ms,
+                              max_results, notifier);
 }
 
 bool mdns_query_async_get_results(

@@ -39,6 +39,11 @@ struct AvahiEntryGroup;
 struct AvahiSimplePoll;
 
 /**
+ * @brief In-flight asynchronous query state (opaque; defined in ESPmDNS.cpp).
+ */
+struct EpoxyMdnsAsyncSearch;
+
+/**
  * @brief mDNS service record
  * 
  * Represents a discovered service with hostname, IP, port, and TXT records.
@@ -165,10 +170,26 @@ public:
   std::vector<MDNSService> _queryResults;
   
   // Async query support
+  //
+  // These mirror ESP-IDF's mdns_query_async_* semantics: beginAsyncQuery()
+  // returns immediately and the search advances in the background from
+  // yield(), so a query never blocks the caller's loop().
   mdns_search_once_t* beginAsyncQuery(const char* service, const char* proto, uint32_t timeout_ms);
+  mdns_search_once_t* beginAsyncQuery(const char* service, const char* proto, uint32_t timeout_ms,
+                                      size_t max_results, mdns_query_notify_t notifier);
   bool getAsyncQueryResults(mdns_search_once_t* search, mdns_result_t** results, uint32_t timeout_ms);
   void deleteAsyncQuery(mdns_search_once_t* search);
-  
+
+  /**
+   * @brief Advance all in-flight async queries without blocking.
+   *
+   * Registered with epoxyRegisterYieldServiceCallback() so it runs from
+   * yield() after every loop() iteration, emulating the ESP-IDF mDNS task.
+   * Safe to call directly (e.g. from a test) to pump the state machine.
+   */
+  void serviceAsyncQueries();
+
+
 private:
   String _hostname;
   String _instanceName;
@@ -187,18 +208,28 @@ private:
   AvahiSimplePoll* _avahi_simple_poll;
   String _current_service_type;
   
-  // Async query state tracking
-  std::map<mdns_search_once_t*, std::vector<MDNSService>> _activeAsyncQueries;
-  std::map<mdns_search_once_t*, uint32_t> _queryStartTimes;
-  std::map<mdns_search_once_t*, uint32_t> _queryTimeouts;
-  
+  // Async query state tracking. Each handle owns its own browser and results,
+  // so concurrent searches cannot see each other's callbacks.
+  std::map<mdns_search_once_t*, EpoxyMdnsAsyncSearch*> _activeAsyncQueries;
+
+  // True once serviceAsyncQueries() is wired into yield().
+  bool _yieldServiceRegistered;
+
   String _makeServiceKey(const String& service, const String& proto);
   MDNSService* _getResult(int idx);
-  
+
   // Avahi helper methods
   bool _initAvahi();
   void _cleanupAvahi();
   void _browseService(const char* service, const char* proto, uint32_t timeout_ms);
+
+  // Async query helpers
+  void _registerYieldService();
+  void _unregisterYieldService();
+  void _pumpAvahi();
+  bool _isSearchComplete(const EpoxyMdnsAsyncSearch* search) const;
+  void _destroySearch(EpoxyMdnsAsyncSearch* search);
+  static void _yieldServiceCallback(void* context);
   bool _publishService(const char* name, const char* service, const char* proto, uint16_t port);
   void _unpublishService(const char* service, const char* proto, uint16_t port);
   bool publishService(const char* name, const char* service, const char* proto, uint16_t port);
