@@ -51,11 +51,50 @@ void serviceYieldCallbacks() {
   }
 }
 
+// Service the things that stand in for hardware asynchrony on the host:
+// polled edge detection for attachInterrupt() handlers, and the background
+// service callbacks. Guarded against re-entry so that a yield callback (or
+// an interrupt handler) which itself calls delay() cannot recurse.
+bool inPump = false;
+
+void pump() {
+  if (inPump) return;
+  inPump = true;
+  checkInterrupts();
+  serviceYieldCallbacks();
+  inPump = false;
+}
+
+// Wait for `us` microseconds, servicing interrupts and yield callbacks on a
+// ~1ms cadence rather than blocking straight through.
+//
+// On real hardware an interrupt fires during a delay; here nothing runs
+// unless something polls for it, so a delay that simply slept would stall
+// every registered handler for its whole duration. Code that waits on an
+// interrupt-driven flag inside a delay loop would then never observe it.
+//
+// Slicing keeps the total wait exact: the slices sum to `us` in both time
+// modes, so virtual time still advances by precisely the amount requested.
+void waitMicros(unsigned long us) {
+  constexpr unsigned long kSliceUs = 1000;
+  for (;;) {
+    pump();
+    if (us == 0) break;
+    const unsigned long slice = (us < kSliceUs) ? us : kSliceUs;
+    if (epoxy_real_time) {
+      usleep(slice);
+    }
+    else {
+      EpoxyInjection::Injector::delay_us(slice);
+    }
+    us -= slice;
+  }
+}
+
 } // namespace
 
 void yield() {
-  checkInterrupts();
-  serviceYieldCallbacks();
+  pump();
   usleep(1000); // prevents program from consuming 100% CPU
 }
 
@@ -170,25 +209,15 @@ void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration
 void noTone(uint8_t /*_pin*/) {}
 
 void delay(unsigned long ms) {
-  if (epoxy_real_time)
-  {
-    usleep(ms * 1000);
-  }
-  else
-  {
-    EpoxyInjection::Injector::delay_us(1000 * ms);
-  }
+  waitMicros(ms * 1000UL);
 }
 
 void delayMicroseconds(unsigned int us) {
-  if (epoxy_real_time)
-  {
-    usleep(us);
-  }
-  else
-  {
-    delay(1000*us);
-  }
+  // n.b. this used to call delay(1000*us) in the simulated-time branch, which
+  // scaled by 10^6: delay() takes milliseconds, so the microsecond count was
+  // multiplied rather than divided. delayMicroseconds(8333) advanced virtual
+  // time by 8333 seconds.
+  waitMicros(us);
 }
 
 unsigned long pulseIn(
