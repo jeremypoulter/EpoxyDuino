@@ -6,6 +6,8 @@
 #ifndef EPOXY_DUINO_PINS_ARDUINO_AVR_H
 #define EPOXY_DUINO_PINS_ARDUINO_AVR_H
 
+#include <stdint.h> // uint8_t, used by the SS/MOSI/... definitions below
+
 // Arbitrarily define the pin for the LED_BUILTIN
 #define LED_BUILTIN 1
 
