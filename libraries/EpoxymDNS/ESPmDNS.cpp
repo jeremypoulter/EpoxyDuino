@@ -1204,7 +1204,7 @@ bool MDNSResponder::getAsyncQueryResults(mdns_search_once_t* search, mdns_result
       mdns_ip_addr_t* addr = (mdns_ip_addr_t*)malloc(sizeof(mdns_ip_addr_t));
       if (addr) {
         addr->addr.u_addr.ip4.addr = svc.ip;
-        addr->addr.type = 0;  // IPv4
+        addr->addr.type = ESP_IPADDR_TYPE_V4;
         addr->next = nullptr;
         result->addr = addr;
       }
@@ -1306,19 +1306,12 @@ mdns_search_once_t * mdns_query_async_new(
     return nullptr;
   }
 
-  // Build full service type if needed
-  String fullServiceType = service_type;
-  if (!fullServiceType.startsWith("_")) {
-    fullServiceType = "_" + fullServiceType;
-  }
-  
-  String fullProto = proto;
-  if (!fullProto.startsWith("_")) {
-    fullProto = "_" + fullProto;
-  }
-  
-  return MDNS.beginAsyncQuery(fullServiceType.c_str(), fullProto.c_str(), timeout_ms,
-                              max_results, notifier);
+  // ESP-IDF uses service_type and proto verbatim ("_openevse", "_tcp"); only
+  // the Arduino ESPmDNS wrapper prepends the DNS-SD underscores. Do the same
+  // here so a caller that forgets them fails on the host exactly as it fails
+  // on the device (the query goes out for openevse.tcp.local and matches
+  // nothing), instead of the shim quietly papering over it.
+  return MDNS.beginAsyncQuery(service_type, proto, timeout_ms, max_results, notifier);
 }
 
 bool mdns_query_async_get_results(

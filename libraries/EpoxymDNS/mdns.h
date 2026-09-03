@@ -92,8 +92,13 @@ typedef struct _ip_addr {
         esp_ip6_addr_t ip6;  /*!< IPv6 address type */
         esp_ip4_addr_t ip4;  /*!< IPv4 address type */
     } u_addr;                /*!< IP address union */
-    uint8_t type;            /*!< ipaddress type */
+    uint8_t type;            /*!< ipaddress type (ESP_IPADDR_TYPE_*) */
 } esp_ip_addr_t;
+
+/* Values match ESP-IDF's esp_netif_ip_addr.h */
+#define ESP_IPADDR_TYPE_V4  0U
+#define ESP_IPADDR_TYPE_V6  6U
+#define ESP_IPADDR_TYPE_ANY 46U
 
 /**
  * @brief mDNS query linked list IP item
@@ -167,8 +172,12 @@ esp_err_t mdns_hostname_set(const char * hostname);
  * using mdns_query_async_get_results() and must be freed with mdns_query_async_delete().
  *
  * @param name           Service instance or host name (NULL for PTR queries)
- * @param service_type   Service type (e.g., "openevse" or "http")
- * @param proto          Protocol type (e.g., "tcp" or "udp")
+ * @param service_type   Service type with its DNS-SD underscore, exactly as
+ *                       ESP-IDF takes it (e.g., "_openevse" or "_http"). Only
+ *                       the Arduino ESPmDNS wrapper adds the underscore; this
+ *                       raw API uses the labels verbatim, so "openevse" queries
+ *                       openevse.tcp.local and finds nothing.
+ * @param proto          Protocol type, likewise (e.g., "_tcp" or "_udp")
  * @param type           Query type (MDNS_TYPE_*)
  * @param timeout_ms     Query timeout in milliseconds
  * @param max_results    Maximum number of results to collect
