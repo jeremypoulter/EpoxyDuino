@@ -94,16 +94,16 @@ void startAsyncSearch() {
   // Start an async query
   // Parameters:
   //   - name: NULL (search for all instances)
-  //   - service_type: "openevse" (without leading underscore)
-  //   - proto: "tcp" (without leading underscore)
+  //   - service_type: "_openevse" (with the DNS-SD underscore, as ESP-IDF takes it)
+  //   - proto: "_tcp" (likewise)
   //   - type: MDNS_IP_PROTOCOL_V4 (IPv4 only)
   //   - timeout_ms: 2000 (2 second query timeout)
   //   - max_results: 10 (collect up to 10 results)
   //   - notifier: NULL (no callback, we'll poll instead)
   activeSearch = mdns_query_async_new(
       NULL,
-      "openevse",
-      "tcp",
+      "_openevse",
+      "_tcp",
       MDNS_IP_PROTOCOL_V4,
       2000,
       10,
