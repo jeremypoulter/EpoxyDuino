@@ -51,11 +51,76 @@ void serviceYieldCallbacks() {
   }
 }
 
+// Service the things that stand in for hardware asynchrony on the host:
+// polled edge detection for attachInterrupt() handlers, and the background
+// service callbacks. Guarded against re-entry so that a yield callback (or
+// an interrupt handler) which itself calls delay() cannot recurse.
+bool inPump = false;
+
+void pump() {
+  if (inPump) return;
+  inPump = true;
+  checkInterrupts();
+  serviceYieldCallbacks();
+  inPump = false;
+}
+
+uint64_t monotonicMicros() {
+  struct timespec spec;
+  clock_gettime(CLOCK_MONOTONIC, &spec);
+  return (uint64_t)spec.tv_sec * 1000000ULL + (uint64_t)spec.tv_nsec / 1000ULL;
+}
+
+// Wait for `us` microseconds, servicing interrupts and yield callbacks on a
+// ~1ms cadence rather than blocking straight through.
+//
+// On real hardware an interrupt fires during a delay; here nothing runs
+// unless something polls for it, so a delay that simply slept would stall
+// every registered handler for its whole duration. Code that waits on an
+// interrupt-driven flag inside a delay loop would then never observe it.
+//
+// The two time modes need opposite accounting, because pump() costs real time
+// but no simulated time:
+//
+//   real time -- pump() runs registered callbacks, which may do genuine work
+//     such as socket I/O, and that comes out of the caller's wait. Sleeping a
+//     full slice on top of it would make every delay overshoot by the total
+//     cost of every pump it made: a delay(1000) pumps a thousand times, so
+//     even a 100us callback would stretch it by 10%. Run to a deadline
+//     instead, which charges both the pump and any usleep() overshoot against
+//     the remaining budget.
+//
+//   simulated time -- pump() advances the clock by nothing at all, so the
+//     slices must sum to exactly `us` or the caller lands somewhere it did
+//     not ask for. Subtracting real elapsed time here would be wrong.
+void waitMicros(unsigned long us) {
+  constexpr unsigned long kSliceUs = 1000;
+
+  if (!epoxy_real_time) {
+    for (;;) {
+      pump();
+      if (us == 0) break;
+      const unsigned long slice = (us < kSliceUs) ? us : kSliceUs;
+      EpoxyInjection::Injector::delay_us(slice);
+      us -= slice;
+    }
+    return;
+  }
+
+  const uint64_t deadline = monotonicMicros() + (uint64_t)us;
+  for (;;) {
+    pump();
+    const uint64_t now = monotonicMicros();
+    if (now >= deadline) break;  // pump alone may have covered a short wait
+    const uint64_t remaining = deadline - now;
+    usleep((useconds_t)(remaining < kSliceUs ? remaining : kSliceUs));
+  }
+}
+
 } // namespace
 
 void yield() {
-  checkInterrupts();
-  serviceYieldCallbacks();
+  pump();
   usleep(1000); // prevents program from consuming 100% CPU
 }
 
@@ -170,25 +235,15 @@ void tone(uint8_t /*_pin*/, unsigned int /*frequency*/, unsigned long /*duration
 void noTone(uint8_t /*_pin*/) {}
 
 void delay(unsigned long ms) {
-  if (epoxy_real_time)
-  {
-    usleep(ms * 1000);
-  }
-  else
-  {
-    EpoxyInjection::Injector::delay_us(1000 * ms);
-  }
+  waitMicros(ms * 1000UL);
 }
 
 void delayMicroseconds(unsigned int us) {
-  if (epoxy_real_time)
-  {
-    usleep(us);
-  }
-  else
-  {
-    delay(1000*us);
-  }
+  // n.b. this used to call delay(1000*us) in the simulated-time branch, which
+  // scaled by 10^6: delay() takes milliseconds, so the microsecond count was
+  // multiplied rather than divided. delayMicroseconds(8333) advanced virtual
+  // time by 8333 seconds.
+  waitMicros(us);
 }
 
 unsigned long pulseIn(
