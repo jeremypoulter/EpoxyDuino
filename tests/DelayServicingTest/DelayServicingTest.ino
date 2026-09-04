@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include <AUnit.h>
 #include <aunit/Test.h>
+#include <unistd.h>
 
 using aunit::TestRunner;
 using namespace EpoxyTest;
@@ -89,6 +90,13 @@ void delayingCallback(void* /*context*/) {
   delay(1);
 }
 
+// Costs real time on every service pass, standing in for a callback that does
+// genuine work -- servicing a socket, say.
+void slowCallback(void* /*context*/) {
+  ++g_callbackCount;
+  usleep(500);
+}
+
 } // namespace
 
 test(DelayServicing, delay_services_yield_callbacks)
@@ -145,6 +153,26 @@ test(DelayServicing, reentrant_callback_terminates)
 
   assertTrue(epoxyUnregisterYieldServiceCallback(delayingCallback, nullptr));
   assertMore(g_callbackCount, 0);
+}
+
+// The wait must not stretch by the cost of servicing it. Every pump runs the
+// registered callbacks, so charging them against the caller's budget is the
+// difference between delay(20) taking 20ms and taking 20ms plus 20 x 500us.
+test(DelayServicing, slow_callbacks_do_not_stretch_the_wait)
+{
+  EpoxyTest::reset();
+  g_callbackCount = 0;
+  assertTrue(epoxyRegisterYieldServiceCallback(slowCallback, nullptr));
+
+  const unsigned long start = millis();
+  delay(20);
+  const unsigned long elapsed = millis() - start;
+
+  epoxyUnregisterYieldServiceCallback(slowCallback, nullptr);
+
+  assertMore(g_callbackCount, 0);       // it really did service them
+  assertMoreOrEqual(elapsed, 20UL);     // and still waited long enough
+  assertLess(elapsed, 30UL);            // without paying for each pump twice
 }
 
 //---------------------------------------------------------------------------

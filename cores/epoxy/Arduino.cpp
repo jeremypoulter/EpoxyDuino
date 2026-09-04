@@ -65,6 +65,12 @@ void pump() {
   inPump = false;
 }
 
+uint64_t monotonicMicros() {
+  struct timespec spec;
+  clock_gettime(CLOCK_MONOTONIC, &spec);
+  return (uint64_t)spec.tv_sec * 1000000ULL + (uint64_t)spec.tv_nsec / 1000ULL;
+}
+
 // Wait for `us` microseconds, servicing interrupts and yield callbacks on a
 // ~1ms cadence rather than blocking straight through.
 //
@@ -73,21 +79,41 @@ void pump() {
 // every registered handler for its whole duration. Code that waits on an
 // interrupt-driven flag inside a delay loop would then never observe it.
 //
-// Slicing keeps the total wait exact: the slices sum to `us` in both time
-// modes, so virtual time still advances by precisely the amount requested.
+// The two time modes need opposite accounting, because pump() costs real time
+// but no simulated time:
+//
+//   real time -- pump() runs registered callbacks, which may do genuine work
+//     such as socket I/O, and that comes out of the caller's wait. Sleeping a
+//     full slice on top of it would make every delay overshoot by the total
+//     cost of every pump it made: a delay(1000) pumps a thousand times, so
+//     even a 100us callback would stretch it by 10%. Run to a deadline
+//     instead, which charges both the pump and any usleep() overshoot against
+//     the remaining budget.
+//
+//   simulated time -- pump() advances the clock by nothing at all, so the
+//     slices must sum to exactly `us` or the caller lands somewhere it did
+//     not ask for. Subtracting real elapsed time here would be wrong.
 void waitMicros(unsigned long us) {
   constexpr unsigned long kSliceUs = 1000;
+
+  if (!epoxy_real_time) {
+    for (;;) {
+      pump();
+      if (us == 0) break;
+      const unsigned long slice = (us < kSliceUs) ? us : kSliceUs;
+      EpoxyInjection::Injector::delay_us(slice);
+      us -= slice;
+    }
+    return;
+  }
+
+  const uint64_t deadline = monotonicMicros() + (uint64_t)us;
   for (;;) {
     pump();
-    if (us == 0) break;
-    const unsigned long slice = (us < kSliceUs) ? us : kSliceUs;
-    if (epoxy_real_time) {
-      usleep(slice);
-    }
-    else {
-      EpoxyInjection::Injector::delay_us(slice);
-    }
-    us -= slice;
+    const uint64_t now = monotonicMicros();
+    if (now >= deadline) break;  // pump alone may have covered a short wait
+    const uint64_t remaining = deadline - now;
+    usleep((useconds_t)(remaining < kSliceUs ? remaining : kSliceUs));
   }
 }
 
