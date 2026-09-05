@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include "avr_stdlib.h"
 
-#define BUFSIZE (sizeof(int) * 8 + 1)
+// The widest conversion is base 2 of an unsigned long: one character per bit,
+// plus a sign for ltoa() and the NUL. This was sizeof(int) * 8 + 1, which is 33
+// on a 64-bit host -- eight short of what ultoa(ULONG_MAX, buf, 2) writes.
+#define BUFSIZE (sizeof(unsigned long) * 8 + 2)
 
 // Copied and modified from https://people.cs.umu.se/isak/snippets/ltoa.c
 // Copyright 1988-90 by Robert B. Stout dba MicroFirm
@@ -26,7 +29,8 @@ char *itoa(int n, char *str, int base) {
   unsigned uarg;
   if (10 == base && n < 0) {
     *head++ = '-';
-    uarg = -n;
+    // Negating INT_MIN/LONG_MIN as a signed type is undefined; do it unsigned.
+    uarg = 0U - (unsigned) n;
   } else {
     uarg = n;
   }
@@ -34,9 +38,9 @@ char *itoa(int n, char *str, int base) {
   unsigned i = 2;
   if (uarg) {
     for (i = 1; uarg; ++i) {
-      div_t r = div(uarg, base);
-      *tail-- = (char)(r.rem + ((9 < r.rem) ? ('A' - 10) : '0'));
-      uarg = r.quot;
+      unsigned rem = uarg % (unsigned) base;
+      *tail-- = (char)(rem + ((9 < rem) ? ('A' - 10) : '0'));
+      uarg /= (unsigned) base;
     }
   } else {
     *tail-- = '0';
@@ -61,9 +65,9 @@ char *utoa(unsigned n, char *str, int base) {
   unsigned i = 2;
   if (n) {
     for (i = 1; n; ++i) {
-      div_t r = div(n, base);
-      *tail-- = (char)(r.rem + ((9 < r.rem) ? ('A' - 10) : '0'));
-      n = r.quot;
+      unsigned rem = n % (unsigned) base;
+      *tail-- = (char)(rem + ((9 < rem) ? ('A' - 10) : '0'));
+      n /= (unsigned) base;
     }
   } else {
     *tail-- = '0';
@@ -89,7 +93,8 @@ char *ltoa(long n, char *str, int base) {
   unsigned long uarg;
   if (10 == base && n < 0) {
     *head++ = '-';
-    uarg = -n;
+    // Negating INT_MIN/LONG_MIN as a signed type is undefined; do it unsigned.
+    uarg = 0UL - (unsigned long) n;
   } else {
     uarg = n;
   }
@@ -97,9 +102,9 @@ char *ltoa(long n, char *str, int base) {
   unsigned i = 2;
   if (uarg) {
     for (i = 1; uarg; ++i) {
-      ldiv_t r = ldiv(uarg, base);
-      *tail-- = (char)(r.rem + ((9 < r.rem) ? ('A' - 10) : '0'));
-      uarg = r.quot;
+      unsigned long rem = uarg % (unsigned long) base;
+      *tail-- = (char)(rem + ((9 < rem) ? ('A' - 10) : '0'));
+      uarg /= (unsigned long) base;
     }
   } else {
     *tail-- = '0';
@@ -124,9 +129,9 @@ char *ultoa(unsigned long n, char *str, int base) {
   unsigned i = 2;
   if (n) {
     for (i = 1; n; ++i) {
-      ldiv_t r = ldiv(n, base);
-      *tail-- = (char)(r.rem + ((9 < r.rem) ? ('A' - 10) : '0'));
-      n = r.quot;
+      unsigned long rem = n % (unsigned long) base;
+      *tail-- = (char)(rem + ((9 < rem) ? ('A' - 10) : '0'));
+      n /= (unsigned long) base;
     }
   } else {
     *tail-- = '0';
