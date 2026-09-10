@@ -36,3 +36,12 @@ epoxyfsdata
 
 # Root file of EpoxyEeromAvr and EpoxyEeromEsp
 epoxyeepromdata
+
+# Coverage data (see `make coverage` and the CI coverage job)
+*.gcda
+*.gcno
+*.gcov
+coverage.xml
+
+# Output of `make -C examples validate`
+validate.log

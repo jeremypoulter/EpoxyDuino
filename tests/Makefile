@@ -15,22 +15,24 @@ endif
 $(info MAKEOPTS : $(MAKEOPTS))
 
 runtests:
-	@set -e; \
+	@status=0; \
 	for recipe in $(RECIPES) run; do \
     for makefile in $(folder)*Test/Makefile; do \
 	     echo "=== $$recipe $$(dirname $$makefile)"; \
-       $(MAKE) -C $$(dirname $$makefile) $(MAKEOPTS) -j $(jobs) $$recipe; \
+       $(MAKE) -C $$(dirname $$makefile) $(MAKEOPTS) -j $(jobs) $$recipe || status=1; \
      done; \
-	done
+	done; \
+	exit $$status
 
 tests:
-	@set -e; \
+	@status=0; \
   for makefile in $(folder)*Test/Makefile; do \
 	  for recipe in clean ""; do \
 	     echo "=== $$recipe in $$(dirname $$makefile)"; \
-       $(MAKE) -C $$(dirname $$makefile) $(MAKEOPTS) $$recipe; \
+       $(MAKE) -C $$(dirname $$makefile) $(MAKEOPTS) $$recipe || status=1; \
      done; \
-	done
+	done; \
+	exit $$status
 
 help:
 	@echo
