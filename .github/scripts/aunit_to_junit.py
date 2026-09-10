@@ -85,6 +85,19 @@ def parse(lines):
         summary = SUMMARY_RE.match(line)
         if summary:
             suite.timed_out = int(summary.group(4))
+            # AUnit's default verbosity doesn't necessarily print a
+            # per-test resolve() line for an expired/timed-out test, so a
+            # timeout wouldn't otherwise show up as a "failed" testcase.
+            # Add a synthetic one so it isn't silently reported as a pass.
+            if suite.timed_out and not any(
+                status == "failed" for _, status, _ in suite.cases
+            ):
+                suite.cases.append((
+                    "(TestRunner timeout)",
+                    "failed",
+                    "{} test(s) timed out (see TestRunner summary above)."
+                    .format(suite.timed_out),
+                ))
             pending = []
             continue
 

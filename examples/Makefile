@@ -11,8 +11,9 @@ all:
 # a clean timeout (exit code 124) is treated as success, same as an example
 # that calls exit(0) itself. Any other exit code (segfault, abort, etc.) is a
 # validation failure.
-validate: all
+validate:
 	@status=0; \
+	$(MAKE) all || status=1; \
 	for i in */Makefile; do \
 		d=$$(dirname $$i); \
 		name=$$(basename $$d); \
@@ -22,7 +23,7 @@ validate: all
 			continue; \
 		fi; \
 		echo "==== Validating: $$d"; \
-		( cd $$d && timeout 3 ./$$name.out < /dev/null > validate.log 2>&1 ); \
+		( cd $$d && timeout -k 1 3 ./$$name.out < /dev/null > validate.log 2>&1 ); \
 		rc=$$?; \
 		if [ $$rc -ne 0 ] && [ $$rc -ne 124 ]; then \
 			echo "FAIL: $$d exited with code $$rc"; \
