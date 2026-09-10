@@ -152,22 +152,38 @@ jobs:
           git clone https://github.com/bxparks/AceRoutine
 
       - name: Build and run instrumented tests
-        env:
-          EXTRA_CXXFLAGS: --coverage -fno-lto
-          EXTRA_CFLAGS: --coverage -fno-lto
-          LDFLAGS: -lpthread --coverage -fno-lto
         run: |
           make -C tests clean
           make -C libraries clean
-          # Coverage counters for cores/epoxy/*.cpp are shared across every
-          # test binary that links them; use 'compiler=gcc' (gcov only
-          # understands GCC's coverage format, not clang's) and go through
-          # 'runtests' directly so the shared core objects are compiled once
-          # and their counters accumulate across every test, instead of
-          # being rebuilt (and reset) per test directory.
-          make -C tests compiler=gcc runtests
-          make -C libraries tests
-          make -C libraries runtests
+          # A few tests/*/Makefile hardcode their own EXTRA_CXXFLAGS (e.g.
+          # 'EXTRA_CXXFLAGS=-g3 -O0'), which as a plain in-Makefile
+          # assignment overrides an environment-provided value. Pass the
+          # coverage flags as 'make VAR=value' command-line arguments
+          # instead: those override every in-Makefile assignment and are
+          # forwarded automatically to the recursive $(MAKE) calls in
+          # tests/Makefile and libraries/Makefile.
+          #
+          # Coverage counters for cores/epoxy/*.cpp are also shared across
+          # every test binary that links them; use 'compiler=gcc' (gcov
+          # only understands GCC's coverage format, not clang's) and go
+          # through 'runtests' directly so the shared core objects are
+          # compiled once and their counters accumulate across every test,
+          # instead of being rebuilt (and reset) per test directory.
+          make -C tests compiler=gcc \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            runtests
+          make -C libraries \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            tests
+          make -C libraries \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            runtests
 
       - name: Generate coverage report
         if: always()
