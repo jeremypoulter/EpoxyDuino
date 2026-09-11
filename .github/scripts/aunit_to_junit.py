@@ -84,19 +84,32 @@ def parse(lines):
 
         summary = SUMMARY_RE.match(line)
         if summary:
+            failed_count = int(summary.group(2))
             suite.timed_out = int(summary.group(4))
-            # AUnit's default verbosity doesn't necessarily print a
-            # per-test resolve() line for an expired/timed-out test, so a
-            # timeout wouldn't otherwise show up as a "failed" testcase.
-            # Add a synthetic one so it isn't silently reported as a pass.
-            if suite.timed_out and not any(
-                status == "failed" for _, status, _ in suite.cases
-            ):
+            # AUnit's Test::resolve() prints the identical " failed."
+            # text for both a genuine assertion failure and an
+            # expired/timed-out test (only the ANSI color differs, which
+            # we strip), and a per-test line for either only appears when
+            # its own Verbosity flag is enabled. Rather than guess which
+            # parsed "failed" cases are which, reconcile against this
+            # summary line's authoritative counts: if fewer "failed"
+            # cases were parsed than AUnit says exist (failed + timed
+            # out combined), some were suppressed by verbosity, so add
+            # exactly that many synthetic entries -- never fewer (which
+            # would silently under-report a real failure) and never more
+            # (which would double-count one that already printed).
+            parsed_failed = sum(
+                1 for _, status, _ in suite.cases if status == "failed"
+            )
+            missing = (failed_count + suite.timed_out) - parsed_failed
+            for _ in range(missing):
                 suite.cases.append((
                     "(TestRunner timeout)",
                     "failed",
-                    "{} test(s) timed out (see TestRunner summary above)."
-                    .format(suite.timed_out),
+                    "TestRunner reported {} failed and {} timed out "
+                    "test(s), but not all printed their own result line "
+                    "(see TestRunner summary above)."
+                    .format(failed_count, suite.timed_out),
                 ))
             pending = []
             continue
