@@ -1,23 +1,26 @@
 tests:
-	@set -e; \
+	@status=0; \
 	for i in */tests/Makefile; do \
 		echo '==== Making:' $$(dirname $$i); \
-		$(MAKE) -C $$(dirname $$i); \
-	done
+		$(MAKE) -C $$(dirname $$i) || status=1; \
+	done; \
+	exit $$status
 
 runtests:
-	@set -e; \
+	@status=0; \
 	for i in */tests/Makefile; do \
 		echo '==== Running:' $$(dirname $$i); \
-		$(MAKE) -C $$(dirname $$i) runtests; \
-	done
+		$(MAKE) -C $$(dirname $$i) runtests || status=1; \
+	done; \
+	exit $$status
 
 examples:
-	@set -e; \
+	@status=0; \
 	for i in */examples/Makefile; do \
 		echo '==== Making:' $$(dirname $$i); \
-		$(MAKE) -C $$(dirname $$i); \
-	done
+		$(MAKE) -C $$(dirname $$i) || status=1; \
+	done; \
+	exit $$status
 
 clean:
 	@set -e; \

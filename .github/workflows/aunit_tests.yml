@@ -1,4 +1,4 @@
-name: AUnit Tests
+name: CI
 
 # Trigger on 'push' on all branches.
 #
@@ -14,40 +14,208 @@ on:
       - develop
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-
+  # Explicitly build the platform-agnostic examples/ sketches under each of
+  # the 3 cores that EpoxyDuino emulates (AVR, ESP8266, ESP32), so that
+  # core-specific code paths in cores/epoxy/ get compiled (and smoke-tested)
+  # under all 3, not just the default AVR core. The tests/ and libraries/
+  # trees each already pin the core they need (e.g. libraries/EpoxyEepromEsp
+  # requires EPOXY_CORE_ESP8266) and are covered by the 'test' job below.
+  build-cores:
+    name: Build examples (${{ matrix.core }})
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        core: [EPOXY_CORE_AVR, EPOXY_CORE_ESP8266, EPOXY_CORE_ESP32]
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libc++-dev
+      - name: Build and validate examples under ${{ matrix.core }}
+        run: make -C examples EPOXY_CORE=${{ matrix.core }} validate
 
-    - name: Setup Arduino libraries
-      run: |
-        cd ..
-        git clone https://github.com/hsaturn/AUnit
-        git clone https://github.com/bxparks/AceCommon
-        git clone https://github.com/bxparks/AceCRC
-        git clone https://github.com/bxparks/AceUtils
-        git clone https://github.com/bxparks/AceRoutine
+  test:
+    name: AUnit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-    - name: Verify examples
-      run: |
-        make -C examples
-        make -C libraries
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libc++-dev libavahi-client-dev
 
-    - name: Verify tests
-      run: |
-        # tests/IPAddressTest requires EPOXY_CORE_ESP8266, which requires clean
-        make -C tests clean
-        make -C tests tests
-        make -C tests runtests
-        # clean after tests/IPAddressTest to revert to EPOXY_CORE_AVR
-        make -C libraries clean
-        make -C libraries tests
-        make -C libraries runtests
+      - name: Setup Arduino libraries
+        run: |
+          cd ..
+          git clone https://github.com/hsaturn/AUnit
+          git clone https://github.com/bxparks/AceCommon
+          git clone https://github.com/bxparks/AceCRC
+          git clone https://github.com/bxparks/AceUtils
+          git clone https://github.com/bxparks/AceRoutine
+
+      - name: Build and validate examples
+        id: validate_examples
+        run: make -C examples validate
+        continue-on-error: true
+
+      - name: Build library examples
+        id: build_library_examples
+        run: make -C libraries examples
+        continue-on-error: true
+
+      - name: Run tests
+        id: run_tests
+        run: |
+          set +e
+          status=0
+
+          make -C tests clean
+          make -C tests runtests 2>&1 | tee test-output.log
+          [ "${PIPESTATUS[0]}" -ne 0 ] && status=1
+
+          # Some libraries (e.g. EpoxyEepromEsp) set their own EPOXY_CORE.
+          # Since cores/epoxy/*.o is a shared, absolute-path build product,
+          # make's timestamp check won't notice that macro change on its
+          # own, so force a clean rebuild here.
+          make -C libraries clean
+          make -C libraries tests
+          [ $? -ne 0 ] && status=1
+          make -C libraries runtests 2>&1 | tee -a test-output.log
+          [ "${PIPESTATUS[0]}" -ne 0 ] && status=1
+
+          exit $status
+        continue-on-error: true
+
+      - name: Generate JUnit report
+        if: always()
+        run: |
+          python3 .github/scripts/aunit_to_junit.py test-output.log junit.xml summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish test report
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: junit.xml
+          comment: true
+          detailed_summary: true
+          require_tests: true
+          check_name: AUnit test results
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-report
+          path: |
+            junit.xml
+            test-output.log
+
+      - name: Fail if any step above failed
+        if: steps.validate_examples.outcome == 'failure' || steps.build_library_examples.outcome == 'failure' || steps.run_tests.outcome == 'failure'
+        run: exit 1
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    # Coverage instrumentation adds enough overhead to make a couple of
+    # timing-sensitive tests flaky. This job is informational only; the
+    # 'test' job above is what gates merges.
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libavahi-client-dev
+          pip install gcovr
+
+      - name: Setup Arduino libraries
+        run: |
+          cd ..
+          git clone https://github.com/hsaturn/AUnit
+          git clone https://github.com/bxparks/AceCommon
+          git clone https://github.com/bxparks/AceCRC
+          git clone https://github.com/bxparks/AceUtils
+          git clone https://github.com/bxparks/AceRoutine
+
+      - name: Build and run instrumented tests
+        run: |
+          make -C tests clean
+          make -C libraries clean
+          # A few tests/*/Makefile hardcode their own EXTRA_CXXFLAGS (e.g.
+          # 'EXTRA_CXXFLAGS=-g3 -O0'), which as a plain in-Makefile
+          # assignment overrides an environment-provided value. Pass the
+          # coverage flags as 'make VAR=value' command-line arguments
+          # instead: those override every in-Makefile assignment and are
+          # forwarded automatically to the recursive $(MAKE) calls in
+          # tests/Makefile and libraries/Makefile.
+          #
+          # Coverage counters for cores/epoxy/*.cpp are also shared across
+          # every test binary that links them; use 'compiler=gcc' (gcov
+          # only understands GCC's coverage format, not clang's) and go
+          # through 'runtests' directly so the shared core objects are
+          # compiled once and their counters accumulate across every test,
+          # instead of being rebuilt (and reset) per test directory.
+          make -C tests compiler=gcc \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            runtests
+          make -C libraries \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            tests
+          make -C libraries \
+            EXTRA_CXXFLAGS="--coverage -fno-lto" \
+            EXTRA_CFLAGS="--coverage -fno-lto" \
+            LDFLAGS="-lpthread --coverage -fno-lto" \
+            runtests
+
+      - name: Generate coverage report
+        if: always()
+        run: |
+          gcovr --root . \
+            --filter 'cores/epoxy/.*' \
+            --filter 'libraries/.*/src/.*' \
+            --filter 'libraries/[^/]*/[^/]*\.(cpp|h)$' \
+            --exclude '.*/tests/.*' \
+            --exclude '.*/examples/.*' \
+            --xml-pretty -o coverage.xml \
+            --markdown-summary coverage-summary.md \
+            --markdown-title 'EpoxyDuino Coverage' \
+            --print-summary
+          cat coverage-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment coverage on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: coverage
+          path: coverage-summary.md
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage.xml
