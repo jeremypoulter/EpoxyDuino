@@ -10,6 +10,17 @@ using namespace EpoxyTest;
 
 //---------------------------------------------------------------------------
 
+// Real time counts from the program's start, as a board's millis() counts from
+// reset - not from the host's boot. This process has been alive for well under
+// a minute by the time the runner gets here; the host may have been up for
+// months, which used to leak straight through.
+test(RealTime, counts_from_program_start)
+{
+  EpoxyTest::reset();
+  assertLess(millis(), 60000UL);
+  assertLess(micros(), 60000000UL);
+}
+
 test(SimulatedTime, back_to_real_after_reset)
 {
   EpoxyTest::reset();

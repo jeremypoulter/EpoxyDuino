@@ -202,13 +202,30 @@ int analogRead(uint8_t /*pin*/) { return 0; }
 
 void analogWrite(uint8_t /*pin*/, int /*val*/) {}
 
+// Microseconds since the program started, from the monotonic clock.
+//
+// On a board, millis() and micros() count from reset in a 32-bit unsigned
+// long, so they start near zero and wrap every 49.7 days / 71.6 minutes, and
+// sketch code is written for that: a timeout is `millis() + n` in a uint32_t
+// compared against millis() later. On a 64-bit host unsigned long never wraps,
+// and CLOCK_MONOTONIC counts from boot, not from the program - so once the
+// host has been up for 49.7 days, millis() exceeds 2^32 and every such
+// timeout stored in 32 bits compares as already expired. Count from the first
+// call instead, and hand back the low 32 bits, the way the board would.
+static unsigned long epoxy_elapsed_micros() {
+  struct timespec spec;
+  clock_gettime(CLOCK_MONOTONIC, &spec);
+  unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
+  if (epoxy_start_time == 0) {
+    epoxy_start_time = us;
+  }
+  return us - epoxy_start_time;
+}
+
 unsigned long millis() {
   if (epoxy_real_time)
   {
-    struct timespec spec;
-    clock_gettime(CLOCK_MONOTONIC, &spec);
-    unsigned long ms = spec.tv_sec * 1000U + spec.tv_nsec / 1000000UL;
-    return ms - epoxy_start_time / 1000;
+    return (uint32_t) (epoxy_elapsed_micros() / 1000);
   }
   else
   {
@@ -219,10 +236,7 @@ unsigned long millis() {
 unsigned long micros() {
   if (epoxy_real_time)
   {
-    struct timespec spec;
-    clock_gettime(CLOCK_MONOTONIC, &spec);
-    unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
-    return us - epoxy_start_time;
+    return (uint32_t) epoxy_elapsed_micros();
   }
   else
   {
