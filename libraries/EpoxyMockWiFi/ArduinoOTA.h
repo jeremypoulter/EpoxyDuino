@@ -3,7 +3,7 @@
 // Minimal host-build stub for ArduinoOTA.
 // Used only for PlatformIO `native` builds.
 
-#include "Update.h"
+#include <Update.h>
 
 typedef int ota_error_t;
 

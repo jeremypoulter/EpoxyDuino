@@ -1,6 +1,11 @@
 # Changelog
 
 * Unreleased
+    * Add the `EpoxyUpdate` library, a host-build `Update` class (moved out of
+      `EpoxyMockWiFi`). If `EPOXY_UPDATE_SINK_DIR` is set, `begin()`, `write()`
+      and `end()` are recorded in that directory: `ota_begin.json`,
+      `ota_image.bin` and `ota_end.json`. `EpoxyUpdateSetSource()` names the
+      URL an update came from.
     * Support sending output of `Serial` port to `STDERR`
       (replaces [PR#92](https://github.com/bxparks/EpoxyDuino/pull/92).
     * Add `SERIAL_OUTPUT_FILENO` macro which can be overridden on the command
