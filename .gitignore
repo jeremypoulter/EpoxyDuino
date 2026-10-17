@@ -45,3 +45,4 @@ coverage.xml
 
 # Output of `make -C examples validate`
 validate.log
+libraries/EpoxyUpdate/tests/**/epoxyupdate_sink/
