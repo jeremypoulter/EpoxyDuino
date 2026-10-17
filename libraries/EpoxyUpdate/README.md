@@ -58,5 +58,4 @@ make runtests
 ## Limitations
 
 * Writes are not checked against a partition size, and `end()` always succeeds.
-* `isRunning()` is always `false`, as in the stub this replaces.
 * There is no flash, so a test cannot check what was written to a partition.

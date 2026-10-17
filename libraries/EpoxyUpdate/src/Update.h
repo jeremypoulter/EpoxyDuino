@@ -20,7 +20,7 @@
 
 class UpdateClass {
  public:
-  bool isRunning() const { return false; }
+  bool isRunning() const { return running; }
   bool isFinished() const { return true; }
   bool begin(size_t size = 0, int cmd = 0);
   size_t write(const uint8_t* data, size_t len);
@@ -30,6 +30,11 @@ class UpdateClass {
   void printError(void* /*out*/) const {}
   void abort();
   const char* errorString() const { return "No error"; }
+
+ private:
+  // True from begin() until end() or abort(), as on the device: the firmware
+  // starts a download only when no update is running.
+  bool running = false;
 };
 
 extern UpdateClass Update;

@@ -52,6 +52,7 @@ void EpoxyUpdateSetSource(const char* url) {
 bool UpdateClass::begin(size_t size, int /*cmd*/) {
   closeImage();
   written = 0;
+  running = true;
 
   std::string path = sinkPath("ota_begin.json");
   if (!path.empty()) {
@@ -82,11 +83,13 @@ size_t UpdateClass::write(const uint8_t* data, size_t len) {
 }
 
 bool UpdateClass::end(bool /*evenIfRemaining*/) {
+  running = false;
   recordEnd(true);
   return true;
 }
 
 void UpdateClass::abort() {
+  running = false;
   recordEnd(false);
 }
 

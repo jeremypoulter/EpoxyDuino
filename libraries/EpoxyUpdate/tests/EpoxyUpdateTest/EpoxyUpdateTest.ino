@@ -95,6 +95,20 @@ testF(UpdateSinkTest, abortRecordsFailure) {
   assertTrue(strstr(readFile(END_PATH, buf, sizeof(buf)), "\"ok\":false") != nullptr);
 }
 
+testF(UpdateSinkTest, isRunningBetweenBeginAndEnd) {
+  assertFalse(Update.isRunning());
+  assertTrue(Update.begin(sizeof(IMAGE)));
+  assertTrue(Update.isRunning());
+  assertEqual(sizeof(IMAGE), Update.write(IMAGE, sizeof(IMAGE)));
+  assertTrue(Update.isRunning());
+  assertTrue(Update.end());
+  assertFalse(Update.isRunning());
+
+  assertTrue(Update.begin(sizeof(IMAGE)));
+  Update.abort();
+  assertFalse(Update.isRunning());
+}
+
 testF(UpdateSinkTest, nothingRecordedWhenSinkUnset) {
   unsetenv("EPOXY_UPDATE_SINK_DIR");
   assertTrue(Update.begin(sizeof(IMAGE)));
