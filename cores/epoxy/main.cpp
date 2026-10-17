@@ -126,6 +126,9 @@ static int epoxyduino_main(int argc, char** argv) {
   setup();
   while (true) {
     loop();
+#if defined(EPOXY_CORE_ESP32)
+    feedLoopWDT(); // as the ESP32 core's loopTask does
+#endif
     yield();
   }
 }
