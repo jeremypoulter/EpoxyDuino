@@ -7,21 +7,18 @@
 #include <time.h>
 #include <sys/time.h>
 
-// Loop watchdog (the ESP32 Arduino core's loopTask WDT). The host has no
-// hardware timer, so a stalled loop is never reset. We only track whether the
-// firmware armed or disarmed it, so callers can check that they pair the calls
-// (e.g. OTA disables it for the TLS handshake and re-enables it after).
-// ponytail: no timeout is enforced. Upgrade path: a watchdog thread that calls
-// abort() when feedLoopWDT() has not run within 5 s while armed.
-static inline bool &loopWDTArmedFlag()
-{
-  static bool armed = true;
-  return armed;
-}
-static inline void enableLoopWDT() { loopWDTArmedFlag() = true; }
-static inline void disableLoopWDT() { loopWDTArmedFlag() = false; }
-static inline void feedLoopWDT() {}
-static inline bool loopWDTArmed() { return loopWDTArmedFlag(); }
+// Loop watchdog (the ESP32 Arduino core's loopTask WDT), implemented in
+// esp32_wdt.cpp. Off until enableLoopWDT(); then the process is terminated,
+// with a dump of the loop task's stack, if feedLoopWDT() is not called within
+// the timeout. epoxyduino_main() feeds it after every loop().
+void enableLoopWDT();
+void disableLoopWDT();
+void feedLoopWDT();
+bool loopWDTArmed();
+// Timeout in ms (default 5000, or EPOXY_LOOP_WDT_MS); 0 never expires.
+void loopWDTSetTimeout(unsigned ms);
+// Replaces terminate-and-dump on expiry, e.g. so tests can observe it.
+void loopWDTSetExpiryHandler(void (*handler)());
 
 // Arduino pin->interrupt mapping helper (used by MicroTasks). For host builds
 // we treat the pin number as the interrupt number.

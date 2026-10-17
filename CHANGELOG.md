@@ -6,6 +6,10 @@
     * Add `SERIAL_OUTPUT_FILENO` macro which can be overridden on the command
       line (e.g. `make EXTRA_CPPFLAGS='SERIAL_OUTPUT_FILENO=2'` to override the
       default output file descriptor of `Serial` at compile time.
+    * Add `disableLoopWDT()` and a working loop watchdog for `EPOXY_CORE_ESP32`:
+      after `enableLoopWDT()`, a monitor thread terminates the process, dumping
+      the stack of the frozen loop task, if `feedLoopWDT()` is not called
+      within 5 s (`EPOXY_LOOP_WDT_MS` overrides, 0 disables).
 * 1.6.0 (2024-07-25)
     * Add `strncat_P()` to `pgmspace.h`.
     * Add `ESP.restart()` and `ESP.getChipId()`. See
