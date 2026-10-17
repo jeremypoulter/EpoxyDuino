@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+using aunit::TestOnce;
 using aunit::TestRunner;
 
 static const char SINK_DIR[] = "epoxyupdate_sink";
@@ -64,6 +65,16 @@ testF(UpdateSinkTest, recordsSourceSizeAndImage) {
   assertEqual(0, memcmp(IMAGE, image, sizeof(IMAGE)));
 
   assertTrue(strstr(readFile(END_PATH, buf, sizeof(buf)), "\"ok\":true,\"written\":5") != nullptr);
+}
+
+testF(UpdateSinkTest, sourceIsEscapedAsJson) {
+  EpoxyUpdateSetSource("https://example.com/a\"b\\c.bin");
+  assertTrue(Update.begin(sizeof(IMAGE)));
+  assertTrue(Update.end());
+
+  char buf[256];
+  assertTrue(strstr(readFile(BEGIN_PATH, buf, sizeof(buf)),
+      "\"source\":\"https://example.com/a\\\"b\\\\c.bin\"") != nullptr);
 }
 
 testF(UpdateSinkTest, uploadHasEmptySource) {

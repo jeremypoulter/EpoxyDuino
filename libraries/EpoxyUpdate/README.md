@@ -21,7 +21,12 @@ program starts. The directory must exist. Each update then writes three files:
 | `ota_end.json`   | `end()` / `abort()` | `{"ok":true,"written":<bytes>}` or `"ok":false`    |
 
 `begin_size` is the value the program passed to `begin()`, so `UPDATE_SIZE_UNKNOWN`
-is recorded as `4294967295`. A new `begin()` replaces the previous record.
+is recorded as `4294967295`. A new `begin()` replaces the previous record, and
+removes the previous `ota_end.json`.
+
+`ok` is `false` when the sink could not open, write, flush or close one of its
+files, even if the update itself succeeded: the record then says the image on disk
+cannot be trusted. The calls themselves still return success.
 
 With the variable unset, nothing is written to disk and every call behaves as
 before.

@@ -73,7 +73,7 @@ Add `EpoxyMockWiFi` to the `ARDUINO_LIBS` in the EpoxyDuino `Makefile`:
 
 ```make
 APP_NAME := MyApp
-ARDUINO_LIBS := EpoxyMockWiFi ...
+ARDUINO_LIBS := EpoxyMockWiFi EpoxyUpdate ...  # EpoxyUpdate provides Update.h
 include ../../../../EpoxyDuino.mk
 ```
 
