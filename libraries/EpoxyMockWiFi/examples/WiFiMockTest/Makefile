@@ -1,3 +1,3 @@
 APP_NAME := WiFiMockTest
-ARDUINO_LIBS := EpoxyMockWiFi
+ARDUINO_LIBS := EpoxyMockWiFi EpoxyUpdate
 include ../../../../EpoxyDuino.mk
