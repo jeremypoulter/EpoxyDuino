@@ -120,6 +120,18 @@ testF(UpdateSinkTest, isRunningBetweenBeginAndEnd) {
   assertFalse(Update.isRunning());
 }
 
+testF(UpdateSinkTest, imageThatCannotBeOpenedIsRecordedAsFailed) {
+  // A directory where the image should go makes fopen() fail. The update still
+  // succeeds, but the record must not say the image is good.
+  mkdir(IMAGE_PATH, 0755);
+  assertTrue(Update.begin(sizeof(IMAGE)));
+  assertEqual(sizeof(IMAGE), Update.write(IMAGE, sizeof(IMAGE)));
+  assertTrue(Update.end());
+
+  char buf[256];
+  assertTrue(strstr(readFile(END_PATH, buf, sizeof(buf)), "\"ok\":false") != nullptr);
+}
+
 testF(UpdateSinkTest, nothingRecordedWhenSinkUnset) {
   unsetenv("EPOXY_UPDATE_SINK_DIR");
   assertTrue(Update.begin(sizeof(IMAGE)));
