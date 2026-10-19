@@ -22,7 +22,7 @@
 #include "epoxy_test/ArduinoTest.inc"
 
 std::atomic<unsigned long> epoxy_micros;
-unsigned long epoxy_start_time = 0;
+std::atomic<uint64_t> epoxy_start_time{0};
 bool epoxy_real_time = true;
 
 // -----------------------------------------------------------------------
@@ -212,14 +212,20 @@ void analogWrite(uint8_t /*pin*/, int /*val*/) {}
 // host has been up for 49.7 days, millis() exceeds 2^32 and every such
 // timeout stored in 32 bits compares as already expired. Count from the first
 // call instead, and hand back the low 32 bits, the way the board would.
-static unsigned long epoxy_elapsed_micros() {
+//
+// The count is 64-bit even where unsigned long is 32, so millis() still wraps
+// at 2^32 ms rather than when micros() does. The start time is latched with a
+// compare-exchange because the Injector thread calls micros() too; a reset
+// clears it, and the next real-time read latches it again.
+static uint64_t epoxy_elapsed_micros() {
   struct timespec spec;
   clock_gettime(CLOCK_MONOTONIC, &spec);
-  unsigned long us = spec.tv_sec * 1000000UL + spec.tv_nsec / 1000U;
-  if (epoxy_start_time == 0) {
-    epoxy_start_time = us;
+  uint64_t us = (uint64_t) spec.tv_sec * 1000000U + spec.tv_nsec / 1000U;
+  uint64_t start = 0;
+  if (!epoxy_start_time.compare_exchange_strong(start, us)) {
+    return us - start;
   }
-  return us - epoxy_start_time;
+  return 0;
 }
 
 unsigned long millis() {

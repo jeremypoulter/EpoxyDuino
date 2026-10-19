@@ -21,6 +21,16 @@ test(RealTime, counts_from_program_start)
   assertLess(micros(), 60000000UL);
 }
 
+// A reset out of simulated time must restart the real clock from zero too,
+// not latch the simulated count as the real clock's starting point.
+test(RealTime, counts_from_reset_after_simulated_time)
+{
+  EpoxyTest::set_seconds(1000000);
+  EpoxyTest::reset();
+  assertLess(millis(), 60000UL);
+  assertLess(micros(), 60000000UL);
+}
+
 test(SimulatedTime, back_to_real_after_reset)
 {
   EpoxyTest::reset();

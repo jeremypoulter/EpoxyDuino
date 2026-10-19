@@ -7,7 +7,7 @@
 
 extern std::atomic<unsigned long> epoxy_micros;
 extern bool epoxy_real_time;
-extern unsigned long epoxy_start_time;
+extern std::atomic<uint64_t> epoxy_start_time;
 
 namespace EpoxyTest
 {
@@ -16,7 +16,6 @@ std::set<Reset>* resets = nullptr;
 void initTime()
 {
   epoxy_start_time = 0;
-  epoxy_start_time = micros();
 }
 
 __attribute__((constructor))
