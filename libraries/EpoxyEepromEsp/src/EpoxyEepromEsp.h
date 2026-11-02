@@ -34,12 +34,26 @@
 /**
  * A EEPROM library that works on POSIX-like systems using EpoxyDuino. This
  * version implements the EEPROM API found on ESP8266 and ESP32 Arduino Cores.
+ *
+ * The two cores differ in the return types of begin(), end() and length(), so
+ * those follow the core chosen with EPOXY_CORE_ESP8266 or EPOXY_CORE_ESP32.
+ * Without either (the default AVR core), the ESP32 signatures are used.
  */
 class EpoxyEepromEsp {
   public:
     EpoxyEepromEsp() = default;
 
-    void begin(size_t size);
+#if defined(EPOXY_CORE_ESP8266)
+    // The ESP8266 core's begin() returns void. The same checks run as on the
+    // ESP32, so a failed begin() still keeps the previous contents.
+    void begin(size_t size) { open(size); }
+#else
+    /**
+     * ESP32 core: returns false if the size is zero or the buffer can't be
+     * allocated. The previous contents are kept in that case.
+     */
+    bool begin(size_t size) { return open(size); }
+#endif
 
     uint8_t read(int address) {
       return data_[address];
@@ -55,17 +69,24 @@ class EpoxyEepromEsp {
 
     bool commit();
 
-    void end() {
-      commit();
-      if (data_) {
-        delete[] data_;
-        data_ = nullptr;
-      }
-      size_ = 0;
-      dirty_ = false;
+#if defined(EPOXY_CORE_ESP8266)
+    // The ESP8266 core's end() returns the result of commit().
+    bool end() {
+      bool saved = commit();
+      close();
+      return saved;
     }
 
     size_t length() { return size_; }
+#else
+    void end() {
+      commit();
+      close();
+    }
+
+    // The ESP32 core returns uint16_t.
+    uint16_t length() { return (uint16_t) size_; }
+#endif
 
     uint8_t& operator[](int address) { return data_[address]; }
 
@@ -101,6 +122,17 @@ class EpoxyEepromEsp {
 
   private:
     static const char* getDataPath();
+
+    bool open(size_t size);
+
+    void close() {
+      if (data_) {
+        delete[] data_;
+        data_ = nullptr;
+      }
+      size_ = 0;
+      dirty_ = false;
+    }
 
     uint8_t* data_ = nullptr;
     size_t size_ = 0;

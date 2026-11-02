@@ -22,40 +22,69 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <errno.h> // errno, ENOENT
 #include <stdlib.h> // getenv()
 #include <stdio.h> // FILE, fopen(), fwrite(), fread()
+#include <string.h> // memset()
+#include <new> // std::nothrow
 #include "EpoxyEepromEsp.h"
 
-void EpoxyEepromEsp::begin(size_t size) {
-  // round up to nearest 4-byte alignment
+bool EpoxyEepromEsp::open(size_t size) {
+#if defined(EPOXY_CORE_ESP8266)
+  // The ESP8266 core clamps to one flash sector and rounds up to 4 bytes. The
+  // ESP32 core keeps the size it was given.
+  if (size > 4096) size = 4096;
   size = (size + 3) & (~3);
+#endif
 
-  if (size == size_) return;
-  size_ = size;
+  if (size == 0) return false;
+#if defined(EPOXY_CORE_ESP32)
+  // ESP32 length() returns uint16_t, so a larger size could not be reported.
+  if (size > 0xFFFF) return false;
+#endif
+  if (size == size_) return true;
+
+  uint8_t* data = new (std::nothrow) uint8_t[size];
+  if (!data) return false;
+
+  // Erased EEPROM reads as 0xFF, so any part of the file that is shorter than
+  // the EEPROM keeps that value, rather than whatever new[] left behind.
+  memset(data, 0xFF, size);
+
+  FILE* fp = fopen(getDataPath(), "rb");
+  if (fp) {
+    fread(data, 1, size, fp);
+    bool readFailed = ferror(fp) != 0;
+    fclose(fp);
+    if (readFailed) {
+      delete[] data;
+      return false;
+    }
+  } else if (errno != ENOENT) {
+    // A file that exists but can't be opened is not a blank EEPROM.
+    delete[] data;
+    return false;
+  }
 
   if (data_) {
     delete[] data_;
   }
-  data_ = new uint8_t[size_];
+  data_ = data;
+  size_ = size;
   dirty_ = false;
-
-  const char* dataPath = getDataPath();
-  FILE* fp = fopen(dataPath, "rb");
-  if (fp) {
-    size_t n = fread(data_, 1, size_, fp);
-    (void) n; /* Ignore unused result */
-    fclose(fp);
-  }
+  return true;
 }
 
 bool EpoxyEepromEsp::commit() {
   if (!size_ || !dirty_ || !data_) return true;
-  const char* dataPath = getDataPath();
-  FILE* fp = fopen(dataPath, "wb");
+  FILE* fp = fopen(getDataPath(), "wb");
   if (!fp) return false;
-  fwrite(data_, 1, size_, fp);
-  fclose(fp);
-  return true;
+  bool written = fwrite(data_, 1, size_, fp) == size_;
+  bool closed = fclose(fp) == 0;
+  if (written && closed) {
+    dirty_ = false;
+  }
+  return written && closed;
 }
 
 const char* EpoxyEepromEsp::getDataPath() {

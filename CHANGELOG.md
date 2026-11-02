@@ -1,6 +1,28 @@
 # Changelog
 
 * Unreleased
+    * `EpoxyEepromEsp` follows the signatures of the core chosen with
+      `EPOXY_CORE_ESP8266` or `EPOXY_CORE_ESP32` (ESP32 when neither is set).
+      The ESP32 core's `begin()` returns `bool`, `false` if the size is zero or
+      the buffer can't be allocated. Its `end()` returns `void` and `length()`
+      returns `uint16_t`. The ESP8266 core's `begin()` returns `void`, its
+      `end()` returns `bool` and its `length()` returns `size_t`.
+    * `Arduino.h` defines the platform macros of the core chosen with
+      `EPOXY_CORE`, as the real core does: `__AVR__` and `ARDUINO_ARCH_AVR`
+      for `EPOXY_CORE_AVR`, `ESP8266` and `ARDUINO_ARCH_ESP8266` for
+      `EPOXY_CORE_ESP8266`, and `ESP32` and `ARDUINO_ARCH_ESP32` for
+      `EPOXY_CORE_ESP32`.
+    * `EpoxyEepromEsp` keeps the requested size on ESP32, as that core does,
+      and rounds up to 4 bytes and clamps to 4096 on ESP8266. An EEPROM file
+      that doesn't exist reads as 0xFF. A file that exists but can't be read
+      makes `begin()` fail. `commit()` reports a failed write. On ESP32,
+      `begin()` refuses a size above 65535, which `length()` can't report.
+    * `avr/pgmspace.h` forwards to `pgmspace.h`, so libraries that include the
+      AVR core's header when `ARDUINO_ARCH_AVR` is set, such as AUnit, compile
+      under `EPOXY_CORE_AVR`.
+    * `EpoxyEepromAvr` has an `EEPROM.h` that maps `EEPROM` to
+      `EpoxyEepromAvrInstance`, as `EpoxyEepromEsp` does for the ESP cores.
+      `EpoxyEepromEsp` is for the ESP8266 and ESP32 cores only.
     * Add the `EpoxyUpdate` library, a host-build `Update` class (moved out of
       `EpoxyMockWiFi`). If `EPOXY_UPDATE_SINK_DIR` is set, `begin()`, `write()`
       and `end()` are recorded in that directory: `ota_begin.json`,

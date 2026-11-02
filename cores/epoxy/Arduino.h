@@ -19,6 +19,21 @@
 #define EPOXY_DUINO_VERSION 10600
 #define EPOXY_DUINO_VERSION_STRING "1.6.0"
 
+// Define the macros the real core defines for the platform chosen with
+// EPOXY_CORE, so code that checks for its platform takes the same branch as on
+// hardware. The AVR core defines __AVR__ and ARDUINO_ARCH_AVR; the ESP8266 and
+// ESP32 cores define ESP8266/ESP32 and ARDUINO_ARCH_ESP8266/ARDUINO_ARCH_ESP32.
+#if defined(EPOXY_CORE_AVR)
+  #define __AVR__ 1
+  #define ARDUINO_ARCH_AVR
+#elif defined(EPOXY_CORE_ESP8266)
+  #define ESP8266
+  #define ARDUINO_ARCH_ESP8266
+#elif defined(EPOXY_CORE_ESP32)
+  #define ESP32
+  #define ARDUINO_ARCH_ESP32
+#endif
+
 #include <algorithm> // min(), max()
 #include <cmath> // abs()
 #include <stdlib.h>

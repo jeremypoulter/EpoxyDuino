@@ -22,8 +22,8 @@ jobs:
   # the 3 cores that EpoxyDuino emulates (AVR, ESP8266, ESP32), so that
   # core-specific code paths in cores/epoxy/ get compiled (and smoke-tested)
   # under all 3, not just the default AVR core. The tests/ and libraries/
-  # trees each already pin the core they need (e.g. libraries/EpoxyEepromEsp
-  # requires EPOXY_CORE_ESP8266) and are covered by the 'test' job below.
+  # trees are covered by the 'test' job below, and the EEPROM libraries are
+  # built and run under each core by the 'eeprom-cores' job.
   build-cores:
     name: Build examples (${{ matrix.core }})
     runs-on: ubuntu-latest
@@ -38,6 +38,38 @@ jobs:
 
       - name: Build and validate examples under ${{ matrix.core }}
         run: make -C examples EPOXY_CORE=${{ matrix.core }} validate
+
+  # The EEPROM libraries have a different API for each core: EpoxyEepromEsp
+  # for ESP8266 and ESP32, EpoxyEepromAvr for AVR. Build and run each one under
+  # the core it targets.
+  eeprom-cores:
+    name: EEPROM ${{ matrix.core }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - core: EPOXY_CORE_AVR
+            dir: libraries/EpoxyEepromAvr/tests/EpoxyEepromAvrTest
+          - core: EPOXY_CORE_ESP8266
+            dir: libraries/EpoxyEepromEsp/tests/EpoxyEepromEspTest
+          - core: EPOXY_CORE_ESP32
+            dir: libraries/EpoxyEepromEsp/tests/EpoxyEepromEspTest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup AUnit
+        run: |
+          cd ..
+          git clone https://github.com/hsaturn/AUnit
+
+      - name: Build and run EEPROM test
+        working-directory: ${{ matrix.dir }}
+        run: |
+          make EPOXY_CORE=${{ matrix.core }}
+          ./$(basename "${{ matrix.dir }}").out
 
   test:
     name: AUnit tests
@@ -85,10 +117,9 @@ jobs:
           make -C tests runtests 2>&1 | tee test-output.log
           [ "${PIPESTATUS[0]}" -ne 0 ] && status=1
 
-          # Some libraries (e.g. EpoxyEepromEsp) set their own EPOXY_CORE.
-          # Since cores/epoxy/*.o is a shared, absolute-path build product,
-          # make's timestamp check won't notice that macro change on its
-          # own, so force a clean rebuild here.
+          # A test may set its own EPOXY_CORE. Since cores/epoxy/*.o is a
+          # shared, absolute-path build product, make's timestamp check won't
+          # notice that macro change on its own, so force a clean rebuild here.
           make -C libraries clean
           make -C libraries tests
           [ $? -ne 0 ] && status=1
@@ -200,6 +231,7 @@ jobs:
             --filter 'libraries/[^/]*/[^/]*\.(cpp|h)$' \
             --exclude '.*/tests/.*' \
             --exclude '.*/examples/.*' \
+            --gcov-ignore-parse-errors=negative_hits.warn \
             --xml-pretty -o coverage.xml \
             --markdown-summary coverage-summary.md \
             --markdown-title 'EpoxyDuino Coverage' \

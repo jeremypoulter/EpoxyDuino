@@ -8,9 +8,23 @@ using aunit::TestRunner;
 
 //---------------------------------------------------------------------------
 
+#if !defined(EPOXY_CORE_ESP8266)
+// begin() returns bool on the ESP32 core (the default here), void on ESP8266
+test(beginReturnsFalseForZeroSize) {
+  // Refused even before any begin(), when the size already matches (0)
+  EpoxyEepromEsp fresh;
+  assertFalse(fresh.begin(0));
+}
+#endif
+
 test(writeAndReadTest) {
+#if defined(EPOXY_CORE_ESP8266)
   EEPROM.begin(1024);
-  assertEqual((size_t) 1024, EEPROM.length());
+#else
+  assertTrue(EEPROM.begin(1024));
+  assertFalse(EEPROM.begin(0)); // a zero size is refused and the 1024 bytes stay
+#endif
+  assertEqual((size_t) 1024, (size_t) EEPROM.length());
 
   // Write using put()
   uint32_t output = 0x04030201;
