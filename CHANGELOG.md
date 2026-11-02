@@ -1,6 +1,8 @@
 # Changelog
 
 * Unreleased
+    * `EpoxyEepromEsp::begin()` returns `bool`, like the ESP8266 and ESP32
+      cores: `false` if the size is zero or the buffer can't be allocated.
     * Add the `EpoxyUpdate` library, a host-build `Update` class (moved out of
       `EpoxyMockWiFi`). If `EPOXY_UPDATE_SINK_DIR` is set, `begin()`, `write()`
       and `end()` are recorded in that directory: `ota_begin.json`,

@@ -39,7 +39,11 @@ class EpoxyEepromEsp {
   public:
     EpoxyEepromEsp() = default;
 
-    void begin(size_t size);
+    /**
+     * Returns false if the size is zero or the buffer can't be allocated, as the
+     * ESP8266 and ESP32 cores do. The previous contents are kept in that case.
+     */
+    bool begin(size_t size);
 
     uint8_t read(int address) {
       return data_[address];

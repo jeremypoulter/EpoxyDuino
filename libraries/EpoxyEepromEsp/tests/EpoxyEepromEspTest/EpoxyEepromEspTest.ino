@@ -9,7 +9,8 @@ using aunit::TestRunner;
 //---------------------------------------------------------------------------
 
 test(writeAndReadTest) {
-  EEPROM.begin(1024);
+  assertTrue(EEPROM.begin(1024));
+  assertFalse(EEPROM.begin(0)); // like the ESP32 core, a zero size is refused
   assertEqual((size_t) 1024, EEPROM.length());
 
   // Write using put()

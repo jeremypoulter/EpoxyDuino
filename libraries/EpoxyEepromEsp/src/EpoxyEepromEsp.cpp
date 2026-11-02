@@ -24,19 +24,24 @@
 
 #include <stdlib.h> // getenv()
 #include <stdio.h> // FILE, fopen(), fwrite(), fread()
+#include <new> // std::nothrow
 #include "EpoxyEepromEsp.h"
 
-void EpoxyEepromEsp::begin(size_t size) {
+bool EpoxyEepromEsp::begin(size_t size) {
   // round up to nearest 4-byte alignment
   size = (size + 3) & (~3);
 
-  if (size == size_) return;
-  size_ = size;
+  if (size == size_) return true;
+  if (size == 0) return false;
+
+  uint8_t* data = new (std::nothrow) uint8_t[size];
+  if (!data) return false;
 
   if (data_) {
     delete[] data_;
   }
-  data_ = new uint8_t[size_];
+  data_ = data;
+  size_ = size;
   dirty_ = false;
 
   const char* dataPath = getDataPath();
@@ -46,6 +51,7 @@ void EpoxyEepromEsp::begin(size_t size) {
     (void) n; /* Ignore unused result */
     fclose(fp);
   }
+  return true;
 }
 
 bool EpoxyEepromEsp::commit() {
