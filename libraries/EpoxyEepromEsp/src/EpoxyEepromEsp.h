@@ -41,7 +41,7 @@ class EpoxyEepromEsp {
 
     /**
      * Returns false if the size is zero or the buffer can't be allocated, as the
-     * ESP8266 and ESP32 cores do. The previous contents are kept in that case.
+     * ESP32 core does. The previous contents are kept in that case.
      */
     bool begin(size_t size);
 

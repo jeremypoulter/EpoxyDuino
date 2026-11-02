@@ -31,8 +31,8 @@ bool EpoxyEepromEsp::begin(size_t size) {
   // round up to nearest 4-byte alignment
   size = (size + 3) & (~3);
 
-  if (size == size_) return true;
   if (size == 0) return false;
+  if (size == size_) return true;
 
   uint8_t* data = new (std::nothrow) uint8_t[size];
   if (!data) return false;

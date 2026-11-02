@@ -8,9 +8,15 @@ using aunit::TestRunner;
 
 //---------------------------------------------------------------------------
 
+test(beginReturnsFalseForZeroSize) {
+  // Refused even before any begin(), when the size already matches (0)
+  EpoxyEepromEsp fresh;
+  assertFalse(fresh.begin(0));
+}
+
 test(writeAndReadTest) {
   assertTrue(EEPROM.begin(1024));
-  assertFalse(EEPROM.begin(0)); // like the ESP32 core, a zero size is refused
+  assertFalse(EEPROM.begin(0)); // a zero size is refused and the 1024 bytes stay
   assertEqual((size_t) 1024, EEPROM.length());
 
   // Write using put()
