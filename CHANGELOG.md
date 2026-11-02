@@ -7,10 +7,14 @@
       the buffer can't be allocated. Its `end()` returns `void` and `length()`
       returns `uint16_t`. The ESP8266 core's `begin()` returns `void`, its
       `end()` returns `bool` and its `length()` returns `size_t`.
-    * `EEPROM.h` maps `EEPROM` to `EpoxyEepromAvrInstance` under
-      `EPOXY_CORE_AVR`, and to `EpoxyEepromEspInstance` otherwise. Sketches
-      built for the AVR core need `EpoxyEepromAvr` in `ARDUINO_LIBS` to include
-      `EEPROM.h`.
+    * `Arduino.h` defines the platform macros of the core chosen with
+      `EPOXY_CORE`, as the real core does: `__AVR__` and `ARDUINO_ARCH_AVR`
+      for `EPOXY_CORE_AVR`, `ESP8266` and `ARDUINO_ARCH_ESP8266` for
+      `EPOXY_CORE_ESP8266`, and `ESP32` and `ARDUINO_ARCH_ESP32` for
+      `EPOXY_CORE_ESP32`.
+    * `EpoxyEepromAvr` has an `EEPROM.h` that maps `EEPROM` to
+      `EpoxyEepromAvrInstance`, as `EpoxyEepromEsp` does for the ESP cores.
+      `EpoxyEepromEsp` is for the ESP8266 and ESP32 cores only.
     * Add the `EpoxyUpdate` library, a host-build `Update` class (moved out of
       `EpoxyMockWiFi`). If `EPOXY_UPDATE_SINK_DIR` is set, `begin()`, `write()`
       and `end()` are recorded in that directory: `ota_begin.json`,
