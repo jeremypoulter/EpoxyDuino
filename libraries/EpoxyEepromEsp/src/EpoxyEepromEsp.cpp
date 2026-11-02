@@ -38,6 +38,10 @@ bool EpoxyEepromEsp::open(size_t size) {
 #endif
 
   if (size == 0) return false;
+#if defined(EPOXY_CORE_ESP32)
+  // ESP32 length() returns uint16_t, so a larger size could not be reported.
+  if (size > 0xFFFF) return false;
+#endif
   if (size == size_) return true;
 
   uint8_t* data = new (std::nothrow) uint8_t[size];

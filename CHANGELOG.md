@@ -15,7 +15,8 @@
     * `EpoxyEepromEsp` keeps the requested size on ESP32, as that core does,
       and rounds up to 4 bytes and clamps to 4096 on ESP8266. An EEPROM file
       that doesn't exist reads as 0xFF. A file that exists but can't be read
-      makes `begin()` fail. `commit()` reports a failed write.
+      makes `begin()` fail. `commit()` reports a failed write. On ESP32,
+      `begin()` refuses a size above 65535, which `length()` can't report.
     * `avr/pgmspace.h` forwards to `pgmspace.h`, so libraries that include the
       AVR core's header when `ARDUINO_ARCH_AVR` is set, such as AUnit, compile
       under `EPOXY_CORE_AVR`.
