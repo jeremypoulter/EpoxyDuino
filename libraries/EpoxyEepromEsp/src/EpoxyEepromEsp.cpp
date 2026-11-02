@@ -27,7 +27,7 @@
 #include <new> // std::nothrow
 #include "EpoxyEepromEsp.h"
 
-bool EpoxyEepromEsp::begin(size_t size) {
+bool EpoxyEepromEsp::open(size_t size) {
   // round up to nearest 4-byte alignment
   size = (size + 3) & (~3);
 
