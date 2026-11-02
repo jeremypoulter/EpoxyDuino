@@ -231,6 +231,7 @@ jobs:
             --filter 'libraries/[^/]*/[^/]*\.(cpp|h)$' \
             --exclude '.*/tests/.*' \
             --exclude '.*/examples/.*' \
+            --gcov-ignore-parse-errors=negative_hits.warn \
             --xml-pretty -o coverage.xml \
             --markdown-summary coverage-summary.md \
             --markdown-title 'EpoxyDuino Coverage' \
