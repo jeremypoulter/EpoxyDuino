@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sys/time.h>
-#include <epoxy_test/injection>
+#include <epoxy_test/injection.h>
 #include "Stream.h"
 
 #if defined(EPOXY_CORE_ESP32)
