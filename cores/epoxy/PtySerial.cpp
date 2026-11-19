@@ -13,6 +13,13 @@
 
 // Map baud rate integers to termios speed constants
 static speed_t baudToSpeed(unsigned long baud) {
+#if defined(__APPLE__)
+  // On Apple, speed_t is the literal bit rate (B9600 == 9600) and termios
+  // defines no constant above B230400, so pass the requested rate through
+  // rather than mapping it. Pseudo-terminals accept any rate; some hardware
+  // serial drivers reject non-standard rates here and need IOSSIOSPEED.
+  return (speed_t)baud;
+#else
   switch (baud) {
     case 9600: return B9600;
     case 19200: return B19200;
@@ -56,6 +63,7 @@ static speed_t baudToSpeed(unsigned long baud) {
 #endif
     default: return B115200;  // Default to 115200
   }
+#endif
 }
 
 PtySerial::PtySerial(const std::string& path)

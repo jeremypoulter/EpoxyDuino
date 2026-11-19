@@ -1,6 +1,6 @@
 #pragma once
 
-#include <epoxy_test/injection>
+#include <epoxy_test/injection.h>
 
 #include "ScriptParser.h"
 #include <string>
