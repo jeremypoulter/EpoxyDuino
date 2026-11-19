@@ -23,15 +23,30 @@
 // EPOXY_CORE, so code that checks for its platform takes the same branch as on
 // hardware. The AVR core defines __AVR__ and ARDUINO_ARCH_AVR; the ESP8266 and
 // ESP32 cores define ESP8266/ESP32 and ARDUINO_ARCH_ESP8266/ARDUINO_ARCH_ESP32.
+// Each is defined only if the build has not already defined it (PlatformIO
+// builds commonly pass these with -D), so the two never clash with a
+// macro-redefinition warning.
 #if defined(EPOXY_CORE_AVR)
-  #define __AVR__ 1
-  #define ARDUINO_ARCH_AVR
+  #ifndef __AVR__
+    #define __AVR__ 1
+  #endif
+  #ifndef ARDUINO_ARCH_AVR
+    #define ARDUINO_ARCH_AVR
+  #endif
 #elif defined(EPOXY_CORE_ESP8266)
-  #define ESP8266
-  #define ARDUINO_ARCH_ESP8266
+  #ifndef ESP8266
+    #define ESP8266
+  #endif
+  #ifndef ARDUINO_ARCH_ESP8266
+    #define ARDUINO_ARCH_ESP8266
+  #endif
 #elif defined(EPOXY_CORE_ESP32)
-  #define ESP32
-  #define ARDUINO_ARCH_ESP32
+  #ifndef ESP32
+    #define ESP32
+  #endif
+  #ifndef ARDUINO_ARCH_ESP32
+    #define ARDUINO_ARCH_ESP32
+  #endif
 #endif
 
 #include <algorithm> // min(), max()
